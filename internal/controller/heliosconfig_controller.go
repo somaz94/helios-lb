@@ -92,17 +92,34 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.handleDeletion(ctx, &heliosConfig)
 	}
 
-	// List all LoadBalancer services
+	// List all services and filter LoadBalancer type
 	var services corev1.ServiceList
-	if err := r.List(ctx, &services, client.MatchingFields{
-		"spec.type": string(corev1.ServiceTypeLoadBalancer),
-	}); err != nil {
+	if err := r.List(ctx, &services); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	// Filter LoadBalancer services
+	var lbServices []corev1.Service
+	for _, svc := range services.Items {
+		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			lbServices = append(lbServices, svc)
+		}
+	}
+	services.Items = lbServices
 
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
 		if len(svc.Status.LoadBalancer.Ingress) == 0 {
+			// 현재 서비스 상태 다시 가져오기
+			var currentSvc corev1.Service
+			if err := r.Get(ctx, types.NamespacedName{
+				Namespace: svc.Namespace,
+				Name:      svc.Name,
+			}, &currentSvc); err != nil {
+				log.Error(err, "failed to get current service")
+				continue
+			}
+
 			// IP 할당
 			ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 			if err != nil {
@@ -115,16 +132,16 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return ctrl.Result{}, err
 			}
 
-			// Update service status
-			svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
+			// 현재 서비스 상태 업데이트
+			currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
 				{IP: ip},
 			}
-			if err := r.Status().Update(ctx, &svc); err != nil {
+			if err := r.Status().Update(ctx, &currentSvc); err != nil {
 				log.Error(err, "failed to update service status")
 				continue
 			}
 
-			// Update HeliosConfig status
+			// HeliosConfig 상태 업데이트
 			if heliosConfig.Status.AllocatedIPs == nil {
 				heliosConfig.Status.AllocatedIPs = make(map[string]string)
 			}

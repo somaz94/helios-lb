@@ -22,8 +22,16 @@ func NewIPAllocator() *IPAllocator {
 	}
 }
 
-// parseIPRange parses IP range string (e.g., "192.168.1.100-192.168.1.110")
+// parseIPRange parses IP range string (e.g., "192.168.1.100-192.168.1.110" or "192.168.1.100")
 func (a *IPAllocator) parseIPRange(ipRange string) error {
+	// 먼저 단일 IP 시도
+	if ip := net.ParseIP(strings.TrimSpace(ipRange)); ip != nil {
+		a.start = ip
+		a.end = ip
+		return nil
+	}
+
+	// IP 범위 파싱 시도
 	parts := strings.Split(ipRange, "-")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid IP range format: %s", ipRange)
@@ -61,6 +69,15 @@ func (a *IPAllocator) AllocateIP(ipRange string) (string, error) {
 		return "", err
 	}
 
+	// 요청된 IP가 범위 내의 단일 IP인 경우
+	if a.start.Equal(a.end) {
+		ipStr := a.start.String()
+		// 이미 사용 중이더라도 같은 IP를 반환
+		a.used[ipStr] = true
+		return ipStr, nil
+	}
+
+	// 범위에서 IP 할당
 	for ip := a.start; ip.String() <= a.end.String(); ip = a.nextIP(ip) {
 		ipStr := ip.String()
 		if !a.used[ipStr] {

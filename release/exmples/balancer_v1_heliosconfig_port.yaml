@@ -1,0 +1,10 @@
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: heliosconfig-sample-port
+spec:
+  ipRange: "10.10.10.65"
+  method: RoundRobin
+  ports:
+    - port: 80
+    - port: 443

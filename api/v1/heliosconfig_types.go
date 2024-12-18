@@ -30,43 +30,43 @@ type HeliosConfigSpec struct {
 	IPRange string `json:"ipRange"`
 
 	// Service references the service to be load balanced
-	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	// +optional
+	Service string `json:"service,omitempty"`
 
 	// Protocol specifies the protocol (TCP/UDP)
 	// +kubebuilder:validation:Enum=TCP;UDP
 	// +kubebuilder:default:=TCP
 	Protocol string `json:"protocol,omitempty"`
 
-	// Port specifies the port to be load balanced
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:default:=80
-	Port int32 `json:"port,omitempty"`
+	// Ports specifies the ports to be load balanced
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:default:={{port: 80}}
+	Ports []PortConfig `json:"ports,omitempty"`
 
 	// Method specifies the load balancing method
 	// +kubebuilder:validation:Enum=RoundRobin;LeastConnection
 	// +kubebuilder:default:=RoundRobin
 	Method string `json:"method,omitempty"`
+}
 
-	// Interface specifies the network interface to use
-	// +kubebuilder:validation:Required
-	Interface string `json:"interface"`
-
-	// ARPInterval specifies the interval in seconds between ARP announcements
-	// +optional
-	// +kubebuilder:default:=1
+// PortConfig defines the configuration for a port
+type PortConfig struct {
+	// Port number
 	// +kubebuilder:validation:Minimum=1
-	ARPInterval int32 `json:"arpInterval,omitempty"`
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port"`
+
+	// Protocol for this specific port (optional, defaults to spec.Protocol)
+	// +kubebuilder:validation:Enum=TCP;UDP
+	// +optional
+	Protocol string `json:"protocol,omitempty"`
 }
 
 // HeliosConfigStatus defines the observed state of HeliosConfig.
 type HeliosConfigStatus struct {
 	// AllocatedIPs is a map of service names to their allocated IPs
 	AllocatedIPs map[string]string `json:"allocatedIPs,omitempty"`
-
-	// NetworkInterface is the currently configured network interface
-	NetworkInterface string `json:"networkInterface,omitempty"`
 
 	// State represents the current state of the load balancer
 	// +kubebuilder:validation:Enum=Pending;Active;Failed
@@ -99,16 +99,17 @@ const (
 	ConditionTypeDegraded  = "Degraded"
 
 	// Condition reasons
-	ReasonInitializing       = "Initializing"
-	ReasonNetworkConfigured  = "NetworkConfigured"
-	ReasonNetworkError       = "NetworkError"
-	ReasonIPAllocationError  = "IPAllocationError"
-	ReasonARPAnnouncerActive = "ARPAnnouncerActive"
-	ReasonARPAnnouncerFailed = "ARPAnnouncerFailed"
+	ReasonInitializing      = "Initializing"
+	ReasonNetworkConfigured = "NetworkConfigured"
+	ReasonNetworkError      = "NetworkError"
+	ReasonIPAllocationError = "IPAllocationError"
 )
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // HeliosConfig is the Schema for the heliosconfigs API.
 type HeliosConfig struct {
