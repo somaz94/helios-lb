@@ -104,10 +104,10 @@ spec:
 # Download the sample yaml file
 
 # default port: 80 & default protocol: tcp
-curl -o heliosconfig.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/balancer_v1_heliosconfig.yaml
+curl -o heliosconfig.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/balancer_v1_heliosconfig.yaml
 
 # port: 80,443 & protocol: tcp
-curl -o heliosconfig-port.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/balancer_v1_heliosconfig_port.yaml
+curl -o heliosconfig-port.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/balancer_v1_heliosconfig_port.yaml
 ```
 
 ### 2. Deploy a service with type LoadBalancer:
@@ -157,7 +157,7 @@ spec:
     app: nginx-test
 
 # Download the sample yaml file
-curl -o nginx-test.yaml https://raw.githubusercontent.com/somaz94/helios-lb/release/samples/nginx-test.yaml
+curl -o nginx-test.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/nginx-test.yaml
 ```
 
 ### Verification
@@ -221,7 +221,7 @@ kubectl delete heliosconfig heliosconfig-sample
 
 3. Remove the controller:
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/config/samples/install.yaml
+kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
 ```
 
 ## Contributing
