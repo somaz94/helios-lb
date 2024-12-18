@@ -1,0 +1,23 @@
+# permissions for end users to view heliosconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: helios-lb
+    app.kubernetes.io/managed-by: kustomize
+  name: heliosconfig-viewer-role
+rules:
+- apiGroups:
+  - balancer.helios.dev
+  resources:
+  - heliosconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - balancer.helios.dev
+  resources:
+  - heliosconfigs/status
+  verbs:
+  - get

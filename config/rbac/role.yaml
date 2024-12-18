@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - balancer.helios.dev
+  resources:
+  - heliosconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - balancer.helios.dev
+  resources:
+  - heliosconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - balancer.helios.dev
+  resources:
+  - heliosconfigs/status
+  verbs:
+  - get
+  - patch
+  - update

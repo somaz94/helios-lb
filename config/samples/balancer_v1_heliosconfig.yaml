@@ -1,0 +1,15 @@
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: heliosconfig-sample
+  finalizers:
+    - balancer.helios.dev/finalizer
+spec:
+  # IP range for virtual IP allocation (CIDR or range format)
+  ipRange: "10.10.10.65" # 192.168.1.100-192.168.1.200
+  # Optional: Load balancing method (defaults to RoundRobin)
+  method: RoundRobin
+  # Optional: Health check interval in seconds (defaults to 5)
+  healthCheckInterval: 5
+  # Optional: Enable metrics collection (defaults to true)
+  metricsEnabled: true

@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- balancer_v1_heliosconfig.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
