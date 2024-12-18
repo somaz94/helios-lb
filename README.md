@@ -165,6 +165,13 @@ curl -o nginx-test.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main
 Check the service status:
 ```bash
 kubectl get svc nginx-test
+...
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)        AGE
+nginx-test   LoadBalancer   10.233.32.189   10.10.10.65   80:30396/TCP   2s
+
+k get heliosconfigs
+NAME                       PHASE    MESSAGE                     AGE
+heliosconfig-sample-port   Active   IP allocated successfully   26s
 ```
 
 You should see an external IP assigned from your configured IP range.
@@ -211,12 +218,13 @@ Common issues and solutions:
 
 1. Delete the LoadBalancer service:
 ```bash
-kubectl delete svc nginx-test
+kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/nginx-test.yaml
 ```
 
 2. Delete the HeliosConfig:
 ```bash
-kubectl delete heliosconfig heliosconfig-sample
+k get heliosconfig
+kubectl delete heliosconfig <heliosconfig-name>
 ```
 
 3. Remove the controller:
