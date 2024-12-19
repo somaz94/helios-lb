@@ -68,7 +68,6 @@ spec:
           periodSeconds: {{ .Values.probes.readiness.periodSeconds | default 10 }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-      hostNetwork: true
       terminationGracePeriodSeconds: 10
       {{- with .Values.nodeSelector }}
       nodeSelector:

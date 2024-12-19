@@ -502,7 +502,6 @@ spec:
             add:
             - ALL
           privileged: true
-      hostNetwork: true
       securityContext:
         runAsNonRoot: true
       serviceAccountName: helios-lb-controller-manager
