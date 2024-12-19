@@ -1,11 +1,11 @@
 {{- if .Values.rbac.create }}
 ---
-# Leader Election Role
+# Leader Election Role (namespace 범위)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "helios-lb.fullname" . }}-leader-election-role
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "helios-lb.labels" . | nindent 4 }}
 rules:
@@ -25,7 +25,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "helios-lb.fullname" . }}-leader-election-rolebinding
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "helios-lb.labels" . | nindent 4 }}
 roleRef:
@@ -35,7 +35,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "helios-lb.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    namespace: {{ .Values.namespace }}
 
 ---
 # Manager ClusterRole
@@ -46,6 +46,7 @@ metadata:
   labels:
     {{- include "helios-lb.labels" . | nindent 4 }}
 rules:
+  # 기존 Manager 권한
   - apiGroups: [""]
     resources: ["services", "services/status"]
     verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
@@ -55,9 +56,10 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "watch"]
+  # CRD 권한
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
-    verbs: ["delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---
 # Manager ClusterRoleBinding
@@ -107,7 +109,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "helios-lb.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    namespace: {{ .Values.namespace }}
 
 ---
 # Metrics Reader ClusterRole
