@@ -76,7 +76,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ include "helios-lb.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    namespace: {{ .Values.namespace }}
 
 ---
 # Metrics Auth ClusterRole
