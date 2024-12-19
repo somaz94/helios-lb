@@ -470,6 +470,13 @@ spec:
         command:
         - /manager
         image: somaz940/helios-lb:v0.2.4
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 5
         livenessProbe:
           httpGet:
             path: /healthz

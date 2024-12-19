@@ -71,6 +71,10 @@ spec:
           capabilities:
             add: 
             - ALL  # 모든 capabilities 허용
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 5"]
         livenessProbe:
           httpGet:
             path: /healthz
