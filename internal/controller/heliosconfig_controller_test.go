@@ -49,6 +49,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		resourceName := fmt.Sprintf("test-helios-%d", testID)
 		serviceName := fmt.Sprintf("test-service-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
+		specificIP := "192.168.1.100"
 
 		By("Creating a new HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -57,7 +58,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: balancerv1.HeliosConfigSpec{
-				IPRange: "192.168.1.100-192.168.1.200",
+				IPRange: specificIP,
 				Method:  "RoundRobin",
 			},
 		}
@@ -70,8 +71,9 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: corev1.ServiceSpec{
-				Type:  corev1.ServiceTypeLoadBalancer,
-				Ports: []corev1.ServicePort{{Port: 80}},
+				Type:           corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP: specificIP,
+				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
 		Expect(k8sClient.Create(ctx, service)).To(Succeed())
@@ -84,9 +86,13 @@ var _ = Describe("HeliosConfig Controller", func() {
 
 		By("Verifying the service gets an IP address")
 		var svc corev1.Service
-		err = k8sClient.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: namespace}, &svc)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(len(svc.Status.LoadBalancer.Ingress)).To(BeNumerically(">", 0))
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: namespace}, &svc)
+			if err != nil {
+				return false
+			}
+			return len(svc.Status.LoadBalancer.Ingress) > 0
+		}, time.Second*10, time.Second).Should(BeTrue())
 	})
 
 	It("should handle invalid IP range", func() {
@@ -101,7 +107,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: balancerv1.HeliosConfigSpec{
-				IPRange: "invalid-range",
+				IPRange: "invalid-ip-address",
 				Method:  "RoundRobin",
 			},
 		}
@@ -114,8 +120,9 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: corev1.ServiceSpec{
-				Type:  corev1.ServiceTypeLoadBalancer,
-				Ports: []corev1.ServicePort{{Port: 80}},
+				Type:           corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP: "invalid-ip-address",
+				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
 		Expect(k8sClient.Create(ctx, service)).To(Succeed())
@@ -126,9 +133,13 @@ var _ = Describe("HeliosConfig Controller", func() {
 		Expect(err).To(HaveOccurred())
 
 		By("Verifying the HeliosConfig status")
-		err = k8sClient.Get(ctx, namespacedName, heliosConfig)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(heliosConfig.Status.Phase).To(Equal("Failed"))
+		Eventually(func() string {
+			err := k8sClient.Get(ctx, namespacedName, heliosConfig)
+			if err != nil {
+				return ""
+			}
+			return heliosConfig.Status.Phase
+		}, time.Second*10, time.Second).Should(Equal("Failed"))
 	})
 
 	It("should handle deletion with cleanup", func() {
@@ -154,5 +165,99 @@ var _ = Describe("HeliosConfig Controller", func() {
 		By("Confirming the HeliosConfig is deleted")
 		err := k8sClient.Get(ctx, namespacedName, heliosConfig)
 		Expect(errors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("should add helios-lb annotation to service with specified IP", func() {
+		resourceName := fmt.Sprintf("test-helios-%d", testID)
+		serviceName := fmt.Sprintf("test-service-%d", testID)
+		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
+		specificIP := "192.168.1.100"
+
+		By("Creating a new HeliosConfig")
+		heliosConfig := &balancerv1.HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: namespace,
+			},
+			Spec: balancerv1.HeliosConfigSpec{
+				IPRange: specificIP,
+				Method:  "RoundRobin",
+			},
+		}
+		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
+
+		By("Creating a LoadBalancer service with specific IP")
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: namespace,
+			},
+			Spec: corev1.ServiceSpec{
+				Type:           corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP: specificIP,
+				Ports:          []corev1.ServicePort{{Port: 80}},
+			},
+		}
+		Expect(k8sClient.Create(ctx, service)).To(Succeed())
+
+		By("Reconciling the request")
+		req := reconcile.Request{NamespacedName: namespacedName}
+		result, err := reconciler.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.RequeueAfter).To(Equal(5 * time.Second))
+
+		By("Verifying the service has helios-lb annotation")
+		var svc corev1.Service
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: namespace}, &svc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(svc.Annotations).To(HaveKey("balancer.helios.dev/load-balancer-class"))
+		Expect(svc.Annotations["balancer.helios.dev/load-balancer-class"]).To(Equal("helios-lb"))
+	})
+
+	It("should not add helios-lb annotation to service with different IP", func() {
+		resourceName := fmt.Sprintf("test-helios-%d", testID)
+		serviceName := fmt.Sprintf("test-service-%d", testID)
+		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
+		heliosIP := "192.168.1.100"
+		differentIP := "192.168.1.200"
+
+		By("Creating a new HeliosConfig")
+		heliosConfig := &balancerv1.HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: namespace,
+			},
+			Spec: balancerv1.HeliosConfigSpec{
+				IPRange: heliosIP,
+				Method:  "RoundRobin",
+			},
+		}
+		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
+
+		By("Creating a LoadBalancer service with different IP")
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: namespace,
+			},
+			Spec: corev1.ServiceSpec{
+				Type:           corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP: differentIP,
+				Ports:          []corev1.ServicePort{{Port: 80}},
+			},
+		}
+		Expect(k8sClient.Create(ctx, service)).To(Succeed())
+
+		By("Reconciling the request")
+		req := reconcile.Request{NamespacedName: namespacedName}
+		result, err := reconciler.Reconcile(ctx, req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.RequeueAfter).To(Equal(5 * time.Second))
+
+		By("Verifying the service does not have helios-lb annotation")
+		var svc corev1.Service
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: namespace}, &svc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(svc.Annotations).ToNot(HaveKey("balancer.helios.dev/load-balancer-class"))
 	})
 })

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,7 @@ import (
 	"github.com/somaz94/helios-lb/internal/network"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 // HeliosConfigReconciler reconciles a HeliosConfig object
@@ -50,6 +52,8 @@ type HeliosConfigReconciler struct {
 // +kubebuilder:rbac:groups=balancer.helios.dev,resources=heliosconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=balancer.helios.dev,resources=heliosconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=balancer.helios.dev,resources=heliosconfigs/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -109,17 +113,13 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
-		if len(svc.Status.LoadBalancer.Ingress) == 0 {
-			// 현재 서비스 상태 다시 가져오기
-			var currentSvc corev1.Service
-			if err := r.Get(ctx, types.NamespacedName{
-				Namespace: svc.Namespace,
-				Name:      svc.Name,
-			}, &currentSvc); err != nil {
-				log.Error(err, "failed to get current service")
-				continue
-			}
+		// heliosConfig에서 할당한 IP를 가진 서비스인지 확인
+		isHeliosService := false
+		if svc.Spec.LoadBalancerIP == heliosConfig.Spec.IPRange {
+			isHeliosService = true
+		}
 
+		if len(svc.Status.LoadBalancer.Ingress) == 0 && isHeliosService {
 			// IP 할당
 			ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 			if err != nil {
@@ -132,12 +132,39 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return ctrl.Result{}, err
 			}
 
-			// 현재 서비스 상태 업데이트
-			currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
-				{IP: ip},
-			}
-			if err := r.Status().Update(ctx, &currentSvc); err != nil {
-				log.Error(err, "failed to update service status")
+			// 서비스 업데이트를 위한 재시도 로직
+			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				// 최신 서비스 상태 가져오기
+				var currentSvc corev1.Service
+				if err := r.Get(ctx, types.NamespacedName{
+					Namespace: svc.Namespace,
+					Name:      svc.Name,
+				}, &currentSvc); err != nil {
+					return err
+				}
+
+				// 어노테이션 추가
+				if currentSvc.Annotations == nil {
+					currentSvc.Annotations = make(map[string]string)
+				}
+				currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
+
+				// spec에 loadBalancerClass 추가
+				currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
+
+				// 상태 업데이트도 함께
+				currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
+					{IP: ip},
+				}
+
+				// 한 번에 업데이트
+				if err := r.Status().Update(ctx, &currentSvc); err != nil {
+					return err
+				}
+
+				return r.Update(ctx, &currentSvc)
+			}); err != nil {
+				log.Error(err, "failed to update service")
 				continue
 			}
 

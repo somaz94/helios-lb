@@ -9,7 +9,7 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 
 - Automatic IP address allocation for LoadBalancer services
 - Support for IP ranges in CIDR or range format
-- RoundRobin load balancing method
+- Multiple load balancing methods (Round Robin, Least Connection, Weighted Round Robin, IP Hash, Random)
 - ARP-based layer 2 mode
 - Configurable network interface
 - Customizable ARP announcement intervals
@@ -148,6 +148,7 @@ metadata:
   name: nginx-test
 spec:
   type: LoadBalancer
+  loadBalancerClass: helios-lb
   loadBalancerIP: "10.10.10.65"
   ports:
   - port: 80
@@ -155,6 +156,7 @@ spec:
     protocol: TCP
   selector:
     app: nginx-test
+
 
 # Download the sample yaml file
 curl -o nginx-test.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/nginx-test.yaml
@@ -181,7 +183,7 @@ You should see an external IP assigned from your configured IP range.
 ### HeliosConfig Options
 
 - `ipRange`: IP range for allocation (required) - supports both range format (192.168.1.100-192.168.1.200) and CIDR format (192.168.1.0/24)
-- `method`: Load balancing method (currently only supports RoundRobin)
+- `method`: Load balancing method (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection)
 - `ports`: Port configuration for the service (default: 80)
 - `protocol`: Protocol type (default: TCP)
 - `healthCheckInterval`: Health check interval in seconds (default: 5)
@@ -194,6 +196,84 @@ The controller uses the following system ports:
 - Metrics endpoint (if enabled): `:8443`
 
 These ports should be available when running the controller with hostNetwork enabled.
+
+### Load Balancer Class
+
+To ensure proper handling of services between MetalLB and Helios-LB, use the `loadBalancerClass` field:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-test
+spec:
+  type: LoadBalancer
+  loadBalancerClass: helios-lb  # Specifies that Helios-LB should handle this service
+  loadBalancerIP: "10.10.10.65"
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx-test
+```
+
+The controller automatically adds the necessary annotations and specifications:
+- Adds annotation: `balancer.helios.dev/load-balancer-class: helios-lb`
+- Sets spec: `loadBalancerClass: helios-lb`
+
+This ensures that:
+1. MetalLB ignores services marked for Helios-LB
+2. Helios-LB only processes services specifically marked for it
+3. No conflicts occur between the two load balancers
+
+### Load Balancing Algorithms
+
+Helios-LB supports multiple load balancing algorithms:
+
+1. **Round Robin (Default)**
+   ```yaml
+   spec:
+     method: RoundRobin
+   ```
+   - Distributes requests sequentially across all healthy backends
+   - Ensures even distribution of traffic
+
+2. **Least Connection**
+   ```yaml
+   spec:
+     method: LeastConnection
+   ```
+   - Directs traffic to backend with fewest active connections
+   - Ideal for long-lived connections
+
+3. **Weighted Round Robin**
+   ```yaml
+   spec:
+     method: WeightedRoundRobin
+     weights:
+       - serviceName: "service1"
+         weight: 3
+       - serviceName: "service2"
+         weight: 1
+   ```
+   - Like Round Robin but with weighted distribution
+   - Higher weight receives proportionally more traffic
+
+4. **IP Hash**
+   ```yaml
+   spec:
+     method: IPHash
+   ```
+   - Consistently maps client IPs to same backend
+   - Useful for session persistence
+
+5. **Random Selection**
+   ```yaml
+   spec:
+     method: RandomSelection
+   ```
+   - Randomly selects from healthy backends
+   - Simple but effective for even distribution
 
 ## Troubleshooting
 
@@ -232,6 +312,40 @@ kubectl delete heliosconfig <heliosconfig-name>
 kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
 ```
 
+## Development Setup
+
+### Install Required Tools
+
+All required tools will be automatically downloaded to `./bin` directory when running:
+```bash
+make install-tools
+```
+
+Or you can install individual tools:
+```bash
+# Install controller-gen
+make controller-gen  # v0.16.4
+
+# Install kustomize
+make kustomize      # v5.5.0
+
+# Install setup-envtest
+make envtest        # v0.19.0
+
+# Install golangci-lint
+make golangci-lint  # v1.61.0
+```
+
+Manual installation locations:
+- All tools will be installed in `./bin` directory
+- Specific versions:
+  - controller-gen v0.16.4
+  - kustomize v5.5.0
+  - setup-envtest v0.19.0
+  - golangci-lint v1.61.0
+
+Note: The binary directory (`./bin`) is git-ignored and will be created when needed.
+
 ## Contributing
 
 Issues and pull requests are welcome.
@@ -239,3 +353,4 @@ Issues and pull requests are welcome.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

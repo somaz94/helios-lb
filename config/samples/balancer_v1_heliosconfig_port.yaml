@@ -4,7 +4,7 @@ metadata:
   name: heliosconfig-sample-port
 spec:
   ipRange: "10.10.10.65"
-  method: RoundRobin
+  method: RoundRobin #  Optional: Load balancing method (defaults to RoundRobin) Enable Value: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection
   ports:
     - port: 80
     - port: 443

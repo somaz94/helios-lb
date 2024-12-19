@@ -9,8 +9,12 @@ rules:
   resources:
   - services
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - ""

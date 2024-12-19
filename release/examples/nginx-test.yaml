@@ -33,6 +33,7 @@ metadata:
   name: nginx-test
 spec:
   type: LoadBalancer
+  loadBalancerClass: helios-lb
   loadBalancerIP: "10.10.10.65"
   ports:
   - port: 80

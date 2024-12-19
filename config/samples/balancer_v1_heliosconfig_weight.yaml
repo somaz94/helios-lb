@@ -1,0 +1,18 @@
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: heliosconfig-sample-weight
+spec:
+  ipRange: "10.10.10.65"
+  method: WeightedRoundRobin  # Enable Value: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection
+  ports:
+    - port: 80
+    - port: 443
+  # WeightedRoundRobin Setting (Optional)
+  weights:
+    - serviceName: "service1"  
+      weight: 3
+    - serviceName: "service2"
+      weight: 2
+    - serviceName: "service3"
+      weight: 1

@@ -5,4 +5,4 @@ metadata:
 spec:
   # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
   ipRange: "10.10.10.65" # 192.168.1.100-192.168.1.200 or 192.168.1.100
-  method: RoundRobin  # Optional: Load balancing method (defaults to RoundRobin)
+  method: RoundRobin  # Optional: Load balancing method (defaults to RoundRobin) Enable Value: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection
