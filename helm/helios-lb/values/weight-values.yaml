@@ -1,0 +1,15 @@
+customresource:
+  weight:
+    enabled: true
+    name: "heliosconfig-weight"
+    ipRange: "10.10.10.65" # Change ipRange
+    ports:
+      - port: 80
+      - port: 443
+    weights:
+      - serviceName: "service1"
+        weight: 3
+      - serviceName: "service2"
+        weight: 2
+      - serviceName: "service3"
+        weight: 1

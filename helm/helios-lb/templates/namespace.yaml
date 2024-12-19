@@ -1,0 +1,11 @@
+{{- if .Values.namespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+    control-plane: controller-manager
+    kubernetes.io/metadata.name: {{ .Values.namespace }}
+{{- end }}
+

@@ -1,0 +1,116 @@
+# Default values for helios-lb.
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace where the controller will be installed
+namespace: helios-lb-system
+
+image:
+  repository: somaz940/helios-lb
+  pullPolicy: IfNotPresent
+  tag: "v0.2.4"
+
+imagePullSecrets: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "helios-lb-controller-manager"
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# Controller configuration
+controller:
+  metrics:
+    bindAddress: ":8443"
+  health:
+    bindAddress: ":9082"
+  leaderElection:
+    enabled: true
+
+service:
+  type: ClusterIP
+  port: 8443
+
+# Probe configuration
+probes:
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    port: 9082
+    path: /healthz
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    port: 9082
+    path: /readyz
+
+rbac:
+  create: true
+
+# CRD installation
+crds:
+  create: true
+
+# Metrics configuration
+metrics:
+  enabled: true
+  service:
+    port: 8443
+    annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+customresource:
+  basic:
+    enabled: false
+    name: "heliosconfig-basic"
+    ipRange: "10.10.10.65"
+    method: "RoundRobin"
+
+  port:
+    enabled: false
+    name: "heliosconfig-port"
+    ipRange: "10.10.10.65"
+    method: "RoundRobin"
+    ports:
+      - port: 80
+      - port: 443
+
+  weight:
+    enabled: false
+    name: "heliosconfig-weight"
+    ipRange: "10.10.10.65"
+    ports:
+      - port: 80
+      - port: 443
+    weights:
+      - serviceName: "service1"
+        weight: 3
+      - serviceName: "service2"
+        weight: 2
+      - serviceName: "service3"
+        weight: 1

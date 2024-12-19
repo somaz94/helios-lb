@@ -1,0 +1,49 @@
+{{- if .Values.customresource.basic.enabled }}
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: {{ .Values.customresource.basic.name | default "heliosconfig-basic" }}
+spec:
+  ipRange: {{ .Values.customresource.basic.ipRange }}
+  {{- if .Values.customresource.basic.method }}
+  method: {{ .Values.customresource.basic.method }}
+  {{- end }}
+  {{- if .Values.customresource.basic.ports }}
+  ports:
+    {{- toYaml .Values.customresource.basic.ports | nindent 4 }}
+  {{- end }}
+  {{- if .Values.customresource.basic.weights }}
+  weights:
+    {{- toYaml .Values.customresource.basic.weights | nindent 4 }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.customresource.port.enabled }}
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: {{ .Values.customresource.port.name | default "heliosconfig-port" }}
+spec:
+  ipRange: {{ .Values.customresource.port.ipRange }}
+  {{- if .Values.customresource.port.method }}
+  method: {{ .Values.customresource.port.method }}
+  {{- end }}
+  ports:
+    {{- toYaml .Values.customresource.port.ports | nindent 4 }}
+{{- end }}
+
+{{- if .Values.customresource.weight.enabled }}
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: {{ .Values.customresource.weight.name | default "heliosconfig-weight" }}
+spec:
+  ipRange: {{ .Values.customresource.weight.ipRange }}
+  method: WeightedRoundRobin
+  {{- if .Values.customresource.weight.ports }}
+  ports:
+    {{- toYaml .Values.customresource.weight.ports | nindent 4 }}
+  {{- end }}
+  weights:
+    {{- toYaml .Values.customresource.weight.weights | nindent 4 }}
+{{- end }}

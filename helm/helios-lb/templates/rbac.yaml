@@ -1,0 +1,143 @@
+{{- if .Values.rbac.create }}
+---
+# Leader Election Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-leader-election-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+
+---
+# Leader Election RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-leader-election-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "helios-lb.fullname" . }}-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "helios-lb.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# Manager ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-manager-role
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["services", "services/status"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: ["balancer.helios.dev"]
+    resources: ["heliosconfigs", "heliosconfigs/status", "heliosconfigs/finalizers"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+---
+# Manager ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-manager-rolebinding
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "helios-lb.fullname" . }}-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "helios-lb.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# Metrics Auth ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-metrics-auth-role
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+
+---
+# Metrics Auth ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-metrics-auth-rolebinding
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "helios-lb.fullname" . }}-metrics-auth-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "helios-lb.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# Metrics Reader ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-metrics-reader
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+
+---
+# HeliosConfig Editor ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-heliosconfig-editor-role
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["balancer.helios.dev"]
+    resources: ["heliosconfigs", "heliosconfigs/status"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+---
+# HeliosConfig Viewer ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helios-lb.fullname" . }}-heliosconfig-viewer-role
+  labels:
+    {{- include "helios-lb.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["balancer.helios.dev"]
+    resources: ["heliosconfigs", "heliosconfigs/status"]
+    verbs: ["get", "list", "watch"]
+{{- end }}
