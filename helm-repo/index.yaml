@@ -6,9 +6,9 @@ entries:
       helm.sh/hook-weight: "-5"
     apiVersion: v2
     appVersion: v0.2.4
-    created: "2024-12-19T17:40:03.428586+09:00"
+    created: "2024-12-19T17:50:15.421705+09:00"
     description: A Helm chart for Helios Load Balancer Controller
-    digest: 109801806d9c2d227158dec4b299df86cdf663c068cffb7edee7dcad013d025d
+    digest: fec0994fa4863de4b58ec3503ba769ae09b1a8eca86c780232d51921e6d40d4f
     home: https://github.com/somaz94/helios-lb
     icon: https://raw.githubusercontent.com/somaz94/helios-lb/main/docs/images/logo.png
     keywords:
@@ -28,4 +28,4 @@ entries:
     urls:
     - https://somaz94.github.io/helios-lb/helm-repo/helios-lb-0.1.0.tgz
     version: 0.1.0
-generated: "2024-12-19T17:40:03.427914+09:00"
+generated: "2024-12-19T17:50:15.421118+09:00"
