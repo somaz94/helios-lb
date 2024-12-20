@@ -33,9 +33,20 @@ The following table lists the configurable parameters of the helios-lb chart and
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `namespace` | Namespace where the controller will be installed | `helios-lb-system` |
+| `nameOverride` | Override the name of the chart | `""` |
+| `fullnameOverride` | Override the full name of the chart | `""` |
 | `image.repository` | Controller image repository | `somaz940/helios-lb` |
 | `image.tag` | Controller image tag | `v0.2.4` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `imagePullSecrets` | Image pull secrets | `[]` |
+| `serviceAccount.create` | Create ServiceAccount | `true` |
+| `serviceAccount.name` | ServiceAccount name | `helios-lb-controller-manager` |
+| `serviceAccount.annotations` | ServiceAccount annotations | `{}` |
+| `podAnnotations` | Pod annotations | `{}` |
+| `podLabels` | Pod labels | `{}` |
+| `podSecurityContext.runAsNonRoot` | Run container as non-root | `true` |
+| `securityContext.allowPrivilegeEscalation` | Allow privilege escalation | `false` |
+| `securityContext.capabilities.drop` | Drop capabilities | `["ALL"]` |
 | `resources.limits.cpu` | CPU resource limits | `500m` |
 | `resources.limits.memory` | Memory resource limits | `128Mi` |
 | `resources.requests.cpu` | CPU resource requests | `10m` |
@@ -43,13 +54,39 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `controller.metrics.bindAddress` | Metrics bind address | `:8443` |
 | `controller.health.bindAddress` | Health probe bind address | `:9082` |
 | `controller.leaderElection.enabled` | Enable leader election | `true` |
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `8443` |
+| `probes.liveness.initialDelaySeconds` | Liveness probe initial delay | `15` |
+| `probes.liveness.periodSeconds` | Liveness probe period | `20` |
+| `probes.liveness.port` | Liveness probe port | `9082` |
+| `probes.liveness.path` | Liveness probe path | `/healthz` |
+| `probes.readiness.initialDelaySeconds` | Readiness probe initial delay | `5` |
+| `probes.readiness.periodSeconds` | Readiness probe period | `10` |
+| `probes.readiness.port` | Readiness probe port | `9082` |
+| `probes.readiness.path` | Readiness probe path | `/readyz` |
 | `rbac.create` | Create RBAC resources | `true` |
-| `crds.create` | Create CRD resources | `true` |
-| `serviceAccount.create` | Create ServiceAccount | `true` |
-| `serviceAccount.name` | ServiceAccount name | `helios-lb-controller-manager` |
+| `crds.create` | Create CRDs | `true` |
+| `crds.remove` | Remove CRDs on uninstall | `true` |
+| `metrics.enabled` | Enable metrics | `true` |
+| `metrics.service.port` | Metrics service port | `8443` |
+| `metrics.service.annotations` | Metrics service annotations | `{}` |
+| `nodeSelector` | Node selector | `{}` |
+| `tolerations` | Tolerations | `[]` |
+| `affinity` | Affinity rules | `{}` |
 | `customresource.basic.enabled` | Enable basic load balancer configuration | `false` |
-| `customresource.port.enabled` | Enable port-specific configuration | `false` |
-| `customresource.weight.enabled` | Enable weighted load balancer configuration | `false` |
+| `customresource.basic.name` | Basic configuration name | `heliosconfig-basic` |
+| `customresource.basic.ipRange` | IP range for basic configuration | `10.10.10.65` |
+| `customresource.basic.method` | Load balancing method for basic configuration | `RoundRobin` |
+| `customresource.port.enabled` | Enable port configuration | `false` |
+| `customresource.port.name` | Port configuration name | `heliosconfig-port` |
+| `customresource.port.ipRange` | IP range for port configuration | `10.10.10.65` |
+| `customresource.port.method` | Load balancing method for port configuration | `RoundRobin` |
+| `customresource.port.ports` | Ports configuration | `[{port: 80}, {port: 443}]` |
+| `customresource.weight.enabled` | Enable weighted configuration | `false` |
+| `customresource.weight.name` | Weighted configuration name | `heliosconfig-weight` |
+| `customresource.weight.ipRange` | IP range for weighted configuration | `10.10.10.65` |
+| `customresource.weight.ports` | Ports for weighted configuration | `[{port: 80}, {port: 443}]` |
+| `customresource.weight.weights` | Service weights configuration | `[{serviceName: "service1", weight: 3}, {serviceName: "service2", weight: 2}, {serviceName: "service3", weight: 1}]` |
 
 ## Custom Resource Configuration
 
