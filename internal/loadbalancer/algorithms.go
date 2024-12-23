@@ -87,19 +87,19 @@ func (lb *LoadBalancer) weightedRoundRobinBackend(backends []*Backend) *Backend 
 	state := lb.rrStates[serviceName]
 	lb.mu.Unlock()
 
-	// 건강한 백엔드만 필터링하고 weight 적용
+	// Filter only healthy backend and apply weight
 	var healthyBackends []*Backend
 	totalWeight := 0
 	for _, backend := range backends {
 		if backend.IsHealthy() {
-			// ServiceName과 일치하는 weight 설정 찾기
+			// Find the weight setting that matches the ServiceName
 			for _, weight := range lb.config.Weights {
 				if weight.ServiceName == backend.ServiceName {
 					backend.Weight = weight.Weight
 					break
 				}
 			}
-			// weight가 설정되지 않은 경우 기본값 1 사용
+			// Use default 1 if weight is not set
 			if backend.Weight == 0 {
 				backend.Weight = 1
 			}

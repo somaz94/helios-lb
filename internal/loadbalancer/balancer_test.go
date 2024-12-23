@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// 테스트 타임아웃을 설정하는 헬퍼 함수
+// Helper function to set test timeout
 func runWithTimeout(t *testing.T, timeout time.Duration, test func(t *testing.T)) {
 	completed := make(chan struct{})
 	go func() {
@@ -185,7 +185,7 @@ func TestHealthCheck(t *testing.T) {
 	})
 
 	backend := &Backend{
-		Address:     "240.0.0.1", // 존재하지 않는 주소
+		Address:     "240.0.0.1", // non-existent address
 		Port:        12345,
 		ServiceName: "test-service",
 	}

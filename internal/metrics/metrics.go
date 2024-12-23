@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	// 로드밸런서 상태 메트릭
+	// Load balancer status metric
 	lbStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "helios_lb_status",
@@ -15,7 +15,7 @@ var (
 		[]string{"name", "namespace"},
 	)
 
-	// 백엔드 연결 수 메트릭
+	// Backend connection count metric
 	backendConnections = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "helios_backend_connections",
@@ -24,7 +24,7 @@ var (
 		[]string{"backend_address", "service_name"},
 	)
 
-	// 백엔드 상태 메트릭
+	// Backend health metric
 	backendHealth = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "helios_backend_health",
@@ -33,7 +33,7 @@ var (
 		[]string{"backend_address", "service_name"},
 	)
 
-	// 로드밸런서 요청 처리 시간
+	// Load balancer request processing time
 	requestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "helios_request_duration_seconds",
@@ -43,7 +43,7 @@ var (
 		[]string{"service_name"},
 	)
 
-	// 로드밸런싱 작업 성공/실패 카운터
+	// Load balancing operation success/failure counter
 	operationTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "helios_operations_total",
@@ -52,7 +52,7 @@ var (
 		[]string{"service_name", "operation", "status"},
 	)
 
-	// IP 할당 메트릭
+	// IP allocation metric
 	ipAllocationStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "helios_ip_allocation_status",

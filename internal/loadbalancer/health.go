@@ -12,7 +12,7 @@ func (lb *LoadBalancer) healthCheckLoop() {
 	ticker := time.NewTicker(lb.config.CheckInterval)
 	defer ticker.Stop()
 
-	// 초기 health check
+	// Initial health check
 	lb.checkWg.Add(1)
 	go func() {
 		lb.doHealthCheck()
@@ -35,16 +35,16 @@ func (lb *LoadBalancer) healthCheckLoop() {
 }
 
 func (lb *LoadBalancer) doHealthCheck() {
-	// RLock 사용 (Lock 대신)
+	// Use RLock instead of Lock
 	lb.mu.RLock()
 	backends := make(map[string][]*Backend)
-	// 백엔드 목록 복사
+	// Copy backend list
 	for service, bkends := range lb.backends {
 		backends[service] = append([]*Backend{}, bkends...)
 	}
 	lb.mu.RUnlock()
 
-	// 락 없이 health check 수행
+	// Perform health check without locking
 	for _, bkends := range backends {
 		for _, backend := range bkends {
 			d := net.Dialer{
