@@ -1,8 +1,8 @@
 # Changelog
 
-## [v0.2.4](https://github.com/somaz94/helios-lb/tree/v0.2.4) (2025-02-03)
+## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2025-02-03)
 
-[Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.4...v0.2.4)
+[Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.4...v0.2.5)
 
 **Merged pull requests:**
 
