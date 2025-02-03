@@ -3,7 +3,7 @@ name: helios-lb
 description: A Helm chart for Helios Load Balancer Controller
 type: application
 version: 0.1.0
-appVersion: "v0.2.4"
+appVersion: "v0.2.5"
 
 # Dependencies and requirements
 kubeVersion: ">=1.16.0-0"

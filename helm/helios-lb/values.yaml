@@ -8,7 +8,7 @@ namespace: helios-lb-system
 image:
   repository: somaz940/helios-lb
   pullPolicy: IfNotPresent
-  tag: "v0.2.4"
+  tag: "v0.2.5"
 
 imagePullSecrets: []
 
