@@ -30,3 +30,6 @@ go.work
 /bin/*
 !/bin/.gitignore
 !/bin/README.md
+
+# MacOS
+.DS_Store
