@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2025-02-21)
+
+[Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.5...v0.2.5)
+
+**Merged pull requests:**
+
+- chore\(deps\): bump golang from 1.23 to 1.24 in the docker-minor group [\#5](https://github.com/somaz94/helios-lb/pull/5) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2025-02-03)
 
 [Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.4...v0.2.5)
