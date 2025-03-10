@@ -50,7 +50,9 @@ func (lb *LoadBalancer) doHealthCheck() {
 			d := net.Dialer{
 				Timeout: time.Millisecond * 10,
 			}
-			conn, err := d.Dial("tcp", fmt.Sprintf("%s:%d", backend.Address, backend.Port))
+			// Handle both IPv4 and IPv6 addresses
+			address := net.JoinHostPort(backend.Address, fmt.Sprintf("%d", backend.Port))
+			conn, err := d.Dial("tcp", address)
 			if err != nil {
 				backend.SetHealthy(false)
 				continue
