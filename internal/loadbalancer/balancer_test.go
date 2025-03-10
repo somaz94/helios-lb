@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -297,5 +298,133 @@ func TestLoadBalancerOperations(t *testing.T) {
 		// Test metrics update
 		recorder := metrics.NewMetricsRecorder()
 		lb.UpdateMetrics(recorder)
+	})
+
+	t.Run("Connection management", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "test-service", 1)
+		lb.AddBackend(backend)
+
+		// Test connection increment/decrement
+		initialConns := atomic.LoadInt32(&backend.Connections)
+		lb.IncrementConnections(backend)
+		if atomic.LoadInt32(&backend.Connections) != initialConns+1 {
+			t.Error("Failed to increment connections")
+		}
+
+		lb.DecrementConnections(backend)
+		if atomic.LoadInt32(&backend.Connections) != initialConns {
+			t.Error("Failed to decrement connections")
+		}
+	})
+
+	t.Run("Load balancing algorithms", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			config   BalancerConfig
+			setup    func(*LoadBalancer)
+			validate func(*testing.T, *LoadBalancer)
+		}{
+			{
+				name: "IPHash with empty client IP",
+				config: BalancerConfig{
+					Type: IPHash,
+				},
+				setup: func(lb *LoadBalancer) {
+					lb.AddBackend(createTestBackend("192.168.1.1", "test-service", 1))
+				},
+				validate: func(t *testing.T, lb *LoadBalancer) {
+					backend := lb.NextBackend("test-service", "")
+					if backend == nil {
+						t.Error("Expected backend even with empty IP")
+					}
+				},
+			},
+			{
+				name: "Weighted Round Robin without weights",
+				config: BalancerConfig{
+					Type: WeightedRoundRobin,
+				},
+				setup: func(lb *LoadBalancer) {
+					lb.AddBackend(createTestBackend("192.168.1.1", "test-service", 1))
+				},
+				validate: func(t *testing.T, lb *LoadBalancer) {
+					backend := lb.NextBackend("test-service", "")
+					if backend == nil {
+						t.Error("Expected backend with default weight")
+					}
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				lb := NewLoadBalancer(tc.config)
+				defer lb.Stop()
+				tc.setup(lb)
+				tc.validate(t, lb)
+			})
+		}
+	})
+
+	t.Run("Multiple stop calls", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type:          RoundRobin,
+			HealthCheck:   true,
+			CheckInterval: time.Millisecond * 100,
+		})
+
+		// Multiple stop calls should not panic
+		lb.Stop()
+		lb.Stop()
+	})
+
+	t.Run("Health check with invalid port", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type:          RoundRobin,
+			HealthCheck:   true,
+			CheckInterval: time.Millisecond * 100,
+		})
+		defer lb.Stop()
+
+		backend := createTestBackend("127.0.0.1", "test-service", 1)
+		backend.Port = 0 // Invalid port
+		backend.SetHealthy(true)
+		lb.AddBackend(backend)
+
+		time.Sleep(time.Millisecond * 200)
+		if backend.IsHealthy() {
+			t.Error("Backend with invalid port should be marked as unhealthy")
+		}
+	})
+
+	t.Run("Health check interval validation", func(t *testing.T) {
+		// Test with zero interval
+		lb := NewLoadBalancer(BalancerConfig{
+			Type:          RoundRobin,
+			HealthCheck:   true,
+			CheckInterval: 0,
+		})
+		defer lb.Stop()
+
+		// Should use default interval
+		if lb.config.CheckInterval == 0 {
+			t.Error("Expected non-zero default health check interval")
+		}
+
+		// Test with negative interval
+		lb = NewLoadBalancer(BalancerConfig{
+			Type:          RoundRobin,
+			HealthCheck:   true,
+			CheckInterval: -1 * time.Second,
+		})
+		defer lb.Stop()
+
+		// Should use default interval
+		if lb.config.CheckInterval <= 0 {
+			t.Error("Expected positive health check interval")
+		}
 	})
 }

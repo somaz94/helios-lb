@@ -2,10 +2,16 @@ package loadbalancer
 
 import (
 	"sync/atomic"
+	"time"
 )
 
 // NewLoadBalancer creates a new load balancer instance
 func NewLoadBalancer(config BalancerConfig) *LoadBalancer {
+	// Set default check interval if health check is enabled but interval is not positive
+	if config.HealthCheck && config.CheckInterval <= 0 {
+		config.CheckInterval = time.Second * 5 // 기본값 5초
+	}
+
 	lb := &LoadBalancer{
 		backends: make(map[string][]*Backend),
 		stats:    make(map[string]*LoadBalancerStats),
