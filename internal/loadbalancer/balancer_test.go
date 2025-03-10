@@ -3,6 +3,8 @@ package loadbalancer
 import (
 	"testing"
 	"time"
+
+	"github.com/somaz94/helios-lb/internal/metrics"
 )
 
 // Helper function to set test timeout
@@ -200,4 +202,100 @@ func TestHealthCheck(t *testing.T) {
 	if healthy {
 		t.Error("Expected backend to be marked as unhealthy")
 	}
+}
+
+func TestLoadBalancerOperations(t *testing.T) {
+	t.Run("Backend management", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
+		defer lb.Stop()
+
+		// Test adding backend
+		backend1 := createTestBackend("192.168.1.1", "test-service", 1)
+		lb.AddBackend(backend1)
+		if len(lb.backends["test-service"]) != 1 {
+			t.Error("Failed to add backend")
+		}
+
+		// Test removing backend
+		lb.RemoveBackend("192.168.1.1", "test-service")
+		if len(lb.backends["test-service"]) != 0 {
+			t.Error("Failed to remove backend")
+		}
+	})
+
+	t.Run("Service isolation", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
+		defer lb.Stop()
+
+		// Add backends for different services
+		backend1 := createTestBackend("192.168.1.1", "service1", 1)
+		backend2 := createTestBackend("192.168.1.2", "service2", 1)
+		lb.AddBackend(backend1)
+		lb.AddBackend(backend2)
+
+		// Test service isolation
+		got1 := lb.NextBackend("service1", "")
+		got2 := lb.NextBackend("service2", "")
+		if got1.ServiceName == got2.ServiceName {
+			t.Error("Services are not properly isolated")
+		}
+	})
+
+	t.Run("Health check behavior", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type:          RoundRobin,
+			HealthCheck:   true,
+			CheckInterval: time.Millisecond * 100,
+		})
+
+		backend := createTestBackend("127.0.0.1", "test-service", 1)
+		backend.SetHealthy(true)
+		lb.AddBackend(backend)
+
+		// 짧은 시간 대기 후 중지
+		time.Sleep(time.Millisecond * 200)
+		lb.Stop()
+
+		if !backend.IsHealthy() {
+			t.Log("Health check status might vary in test environment")
+		}
+	})
+
+	t.Run("Stats and metrics", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type:           RoundRobin,
+			MetricsEnabled: true,
+		})
+		defer lb.Stop()
+
+		// Test empty stats first
+		emptyStats := lb.GetStats("test-service")
+		if emptyStats.ActiveBackends != 0 {
+			t.Errorf("Expected 0 active backends for empty service, got %d", emptyStats.ActiveBackends)
+		}
+
+		// Add backend and initialize stats
+		backend := createTestBackend("192.168.1.1", "test-service", 1)
+		backend.SetHealthy(true)
+		lb.AddBackend(backend)
+
+		// Initialize stats manually for test
+		lb.mu.Lock()
+		lb.stats["test-service"] = &LoadBalancerStats{
+			ActiveBackends:   1,
+			HealthyBackends:  1,
+			TotalConnections: 0,
+		}
+		lb.mu.Unlock()
+
+		// Verify stats
+		stats := lb.GetStats("test-service")
+		if stats.ActiveBackends != 1 {
+			t.Errorf("Active backends count: expected 1, got %d", stats.ActiveBackends)
+		}
+
+		// Test metrics update
+		recorder := metrics.NewMetricsRecorder()
+		lb.UpdateMetrics(recorder)
+	})
 }

@@ -12,7 +12,7 @@ func (lb *LoadBalancer) GetStats(serviceName string) LoadBalancerStats {
 	return LoadBalancerStats{}
 }
 
-func (lb *LoadBalancer) UpdateMetrics(recorder metrics.MetricsRecorder) {
+func (lb *LoadBalancer) UpdateMetrics(recorder *metrics.MetricsRecorder) {
 	lb.mu.RLock()
 	defer lb.mu.RUnlock()
 
