@@ -6,6 +6,7 @@
 
 **Merged pull requests:**
 
+- chore\(deps\): bump golangci/golangci-lint-action from 7 to 8 [\#15](https://github.com/somaz94/helios-lb/pull/15) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump the go-minor group with 3 updates [\#14](https://github.com/somaz94/helios-lb/pull/14) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump the go-minor group across 1 directory with 3 updates [\#13](https://github.com/somaz94/helios-lb/pull/13) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump sigs.k8s.io/controller-runtime from 0.20.3 to 0.20.4 in the go-minor group [\#11](https://github.com/somaz94/helios-lb/pull/11) ([dependabot[bot]](https://github.com/apps/dependabot))
