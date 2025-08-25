@@ -6,6 +6,7 @@
 
 **Merged pull requests:**
 
+- chore\(deps\): bump the go-minor group across 1 directory with 7 updates [\#22](https://github.com/somaz94/helios-lb/pull/22) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump actions/checkout from 4 to 5 [\#21](https://github.com/somaz94/helios-lb/pull/21) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump golang from 1.24 to 1.25 in the docker-minor group [\#20](https://github.com/somaz94/helios-lb/pull/20) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump golangci/golangci-lint-action from 7 to 8 [\#15](https://github.com/somaz94/helios-lb/pull/15) ([dependabot[bot]](https://github.com/apps/dependabot))
