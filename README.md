@@ -5,6 +5,8 @@
 
 Helios Load Balancer is a Kubernetes controller that provides load balancing functionality for bare metal Kubernetes clusters, similar to MetalLB. It automatically assigns IP addresses to LoadBalancer services and manages the network configuration.
 
+<br/>
+
 ## Features
 
 - Automatic IP address allocation for LoadBalancer services
@@ -16,6 +18,8 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 - Prometheus metrics support
 - Status monitoring and reporting
 
+<br/>
+
 ## How it Works
 
 The controller:
@@ -24,6 +28,8 @@ The controller:
 3. Configures network interfaces with virtual IPs
 4. Manages ARP announcements for layer 2 connectivity
 5. Updates service status with allocated external IPs
+
+<br/>
 
 ## Coexistence with MetalLB
 
@@ -77,13 +83,19 @@ Helios Load Balancer can coexist with MetalLB in the same cluster if properly co
 
 This way, you can leverage both load balancers in your cluster, each managing its own IP range.
 
+<br/>
+
 ## Installation
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
 ```
 
+<br/>
+
 ## Usage
+
+<br/>
 
 ### 1. Create a HeliosConfig:
 
@@ -109,6 +121,8 @@ curl -o heliosconfig.yaml https://raw.githubusercontent.com/somaz94/helios-lb/ma
 # port: 80,443 & protocol: tcp
 curl -o heliosconfig-port.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/balancer_v1_heliosconfig_port.yaml
 ```
+
+<br/>
 
 ### 2. Deploy a service with type LoadBalancer:
 
@@ -162,6 +176,8 @@ spec:
 curl -o nginx-test.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/nginx-test.yaml
 ```
 
+<br/>
+
 ### Verification
 
 Check the service status:
@@ -178,7 +194,11 @@ heliosconfig-sample-port   Active   IP allocated successfully   26s
 
 You should see an external IP assigned from your configured IP range.
 
+<br/>
+
 ## Configuration
+
+<br/>
 
 ### HeliosConfig Options
 
@@ -188,6 +208,8 @@ You should see an external IP assigned from your configured IP range.
 - `protocol`: Protocol type (default: TCP)
 - `healthCheckInterval`: Health check interval in seconds (default: 5)
 - `metricsEnabled`: Enable or disable metrics collection (default: true)
+
+<br/>
 
 ### System Ports
 
@@ -225,6 +247,8 @@ This ensures that:
 1. MetalLB ignores services marked for Helios-LB
 2. Helios-LB only processes services specifically marked for it
 3. No conflicts occur between the two load balancers
+
+<br/>
 
 ### Load Balancing Algorithms
 
@@ -275,6 +299,8 @@ Helios-LB supports multiple load balancing algorithms:
    - Randomly selects from healthy backends
    - Simple but effective for even distribution
 
+<br/>
+
 ## Troubleshooting
 
 Common issues and solutions:
@@ -294,6 +320,8 @@ Common issues and solutions:
    - Verify network interface configuration
    - Ensure IP range is valid for your network
 
+<br/>
+
 ## Cleanup
 
 1. Delete the LoadBalancer service:
@@ -312,7 +340,11 @@ kubectl delete heliosconfig <heliosconfig-name>
 kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
 ```
 
+<br/>
+
 ## Development Setup
+
+<br/>
 
 ### Install Required Tools
 
@@ -346,9 +378,13 @@ Manual installation locations:
 
 Note: The binary directory (`./bin`) is git-ignored and will be created when needed.
 
+<br/>
+
 ## Contributing
 
 Issues and pull requests are welcome.
+
+<br/>
 
 ## License
 
