@@ -1,11 +1,12 @@
 # Changelog
 
-## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2025-12-17)
+## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2025-12-24)
 
 [Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.5...v0.2.5)
 
 **Merged pull requests:**
 
+- chore\(deps\): bump the go-minor group with 4 updates [\#29](https://github.com/somaz94/helios-lb/pull/29) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump the go-minor group with 5 updates [\#28](https://github.com/somaz94/helios-lb/pull/28) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump actions/checkout from 5 to 6 [\#27](https://github.com/somaz94/helios-lb/pull/27) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump golangci/golangci-lint-action from 8 to 9 [\#26](https://github.com/somaz94/helios-lb/pull/26) ([dependabot[bot]](https://github.com/apps/dependabot))
