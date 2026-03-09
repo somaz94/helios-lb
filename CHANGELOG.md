@@ -1,11 +1,12 @@
 # Changelog
 
-## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2026-03-04)
+## [v0.2.5](https://github.com/somaz94/helios-lb/tree/v0.2.5) (2026-03-09)
 
 [Full Changelog](https://github.com/somaz94/helios-lb/compare/v0.2.5...v0.2.5)
 
 **Merged pull requests:**
 
+- chore\(deps\): bump sigs.k8s.io/controller-runtime from 0.23.1 to 0.23.3 in the go-minor group [\#36](https://github.com/somaz94/helios-lb/pull/36) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump the go-minor group across 1 directory with 4 updates [\#35](https://github.com/somaz94/helios-lb/pull/35) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump the go-minor group across 1 directory with 6 updates [\#33](https://github.com/somaz94/helios-lb/pull/33) ([dependabot[bot]](https://github.com/apps/dependabot))
 - chore\(deps\): bump golang from 1.25 to 1.26 in the docker-minor group [\#32](https://github.com/somaz94/helios-lb/pull/32) ([dependabot[bot]](https://github.com/apps/dependabot))
