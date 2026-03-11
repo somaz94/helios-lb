@@ -14,10 +14,43 @@ SKIP=0
 NAMESPACE="helios-lb-system"
 SAMPLES_DIR="config/samples"
 
+# Configurable test IPs via environment variables
+# Override with: TEST_IP=172.30.0.100 TEST_IP2=172.30.0.101 TEST_IP_RANGE=172.30.0.100-172.30.0.110 make test-integration
+TEST_IP="${TEST_IP:-10.10.10.100}"
+TEST_IP2="${TEST_IP2:-10.10.10.101}"
+TEST_IP_RANGE="${TEST_IP_RANGE:-10.10.10.100-10.10.10.110}"
+
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
 log_fail()  { echo -e "${RED}[FAIL]${NC} $1"; FAIL=$((FAIL+1)); }
 log_skip()  { echo -e "${YELLOW}[SKIP]${NC} $1"; SKIP=$((SKIP+1)); }
+
+# Check if an IP is in use (ping, arping, ARP cache, K8s services)
+check_ip_in_use() {
+  local ip=$1
+  # 1) ping - ICMP echo
+  if ping -c 1 -W 1 "$ip" >/dev/null 2>&1; then
+    return 0
+  fi
+  # 2) arping - ARP layer (more reliable on L2, detects hosts that block ICMP)
+  if command -v arping >/dev/null 2>&1; then
+    if arping -c 1 -w 1 "$ip" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  # 3) ARP cache - check if MAC address is known
+  if arp -n "$ip" 2>/dev/null | grep -qv "incomplete\|no entry"; then
+    return 0
+  fi
+  # 4) K8s services - check if any service already uses this IP
+  if kubectl get svc -A -o jsonpath='{range .items[*]}{.status.loadBalancer.ingress[0].ip}{"\n"}{end}' 2>/dev/null | grep -q "^${ip}$"; then
+    return 0
+  fi
+  if kubectl get svc -A -o jsonpath='{range .items[*]}{.spec.loadBalancerIP}{"\n"}{end}' 2>/dev/null | grep -q "^${ip}$"; then
+    return 0
+  fi
+  return 1
+}
 
 wait_for_pods() {
   local ns=$1
@@ -73,11 +106,13 @@ if kubectl get crd ipaddresspools.metallb.io >/dev/null 2>&1; then
   DETECTED_LBS="${DETECTED_LBS} MetalLB"
   log_info "Detected MetalLB - checking IP pool conflicts..."
   METALLB_POOLS=$(kubectl get ipaddresspool -A -o jsonpath='{range .items[*]}{.spec.addresses[*]}{"\n"}{end}' 2>/dev/null || echo "")
-  if echo "$METALLB_POOLS" | grep -q "10.10.10"; then
-    log_info "WARNING: MetalLB has IP pool in 10.10.10.x range. Test IPs may conflict."
+  TEST_SUBNET=$(echo "$TEST_IP" | cut -d. -f1-3)
+  if echo "$METALLB_POOLS" | grep -q "$TEST_SUBNET"; then
+    log_info "WARNING: MetalLB has IP pool overlapping test subnet (${TEST_SUBNET}.x)"
     log_info "MetalLB pools: ${METALLB_POOLS}"
+    log_info "Consider overriding: TEST_IP=<free-ip> make test-integration"
   else
-    log_pass "No MetalLB IP pool conflict with test range (10.10.10.x)"
+    log_pass "No MetalLB IP pool conflict with test subnet (${TEST_SUBNET}.x)"
   fi
 fi
 if kubectl get crd ciliumloadbalancerippools.cilium.io >/dev/null 2>&1; then
@@ -92,6 +127,22 @@ if [ -n "$DETECTED_LBS" ]; then
 else
   log_info "No other LB controllers detected"
 fi
+
+# Pre-flight IP availability check
+log_info "Checking test IP availability..."
+IP_CONFLICT=false
+for ip in "$TEST_IP" "$TEST_IP2"; do
+  if check_ip_in_use "$ip"; then
+    log_fail "IP ${ip} is already in use! Override with TEST_IP=<free-ip> make test-integration"
+    IP_CONFLICT=true
+  fi
+done
+if [ "$IP_CONFLICT" = true ]; then
+  log_fail "Cannot proceed with conflicting IPs. Please provide unused IPs."
+  exit 1
+fi
+log_pass "Test IPs are available (${TEST_IP}, ${TEST_IP2})"
+log_info "Using test IPs: TEST_IP=${TEST_IP}, TEST_IP2=${TEST_IP2}, TEST_IP_RANGE=${TEST_IP_RANGE}"
 
 # Auto-install CRD if not found
 if ! kubectl get crd heliosconfigs.balancer.helios.dev >/dev/null 2>&1; then
@@ -133,7 +184,7 @@ echo ""
 log_info "--- Test A: Basic HeliosConfig ---"
 
 # Create a LoadBalancer service
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -170,7 +221,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.100"
+  loadBalancerIP: "${TEST_IP}"
   ports:
   - port: 80
     targetPort: 80
@@ -182,14 +233,14 @@ EOF
 kubectl wait --for=condition=available deploy/test-nginx -n default --timeout=60s 2>/dev/null || true
 
 # Create basic HeliosConfig
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-basic
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
 EOF
 
@@ -221,14 +272,14 @@ cleanup_cr
 echo ""
 log_info "--- Test B: Port-based HeliosConfig ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-port
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
   ports:
     - port: 80
@@ -255,14 +306,14 @@ cleanup_cr
 echo ""
 log_info "--- Test C: LeastConnection Method ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-leastconn
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: LeastConnection
 EOF
 
@@ -279,7 +330,7 @@ echo ""
 log_info "--- Test D: IP Range Allocation ---"
 
 # Create a second service
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Service
 metadata:
@@ -288,7 +339,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.101"
+  loadBalancerIP: "${TEST_IP2}"
   ports:
   - port: 80
     targetPort: 80
@@ -297,14 +348,14 @@ spec:
     app: test-nginx
 EOF
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-range
   namespace: default
 spec:
-  ipRange: "10.10.10.100-10.10.10.110"
+  ipRange: "${TEST_IP_RANGE}"
   method: RoundRobin
 EOF
 
@@ -329,14 +380,14 @@ cleanup_cr
 echo ""
 log_info "--- Test E: Cleanup on Deletion ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-cleanup
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
 EOF
 
