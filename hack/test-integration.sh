@@ -67,12 +67,31 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
 fi
 log_pass "Kubernetes cluster is reachable"
 
-# Check controller is running
+# Auto-install CRD if not found
+if ! kubectl get crd heliosconfigs.balancer.helios.dev >/dev/null 2>&1; then
+  log_info "HeliosConfig CRD not found. Installing with 'make install'..."
+  make install
+  if ! kubectl get crd heliosconfigs.balancer.helios.dev >/dev/null 2>&1; then
+    log_fail "Failed to install HeliosConfig CRD"
+    exit 1
+  fi
+fi
+log_pass "HeliosConfig CRD is installed"
+
+# Auto-deploy controller if not running
 if kubectl get pods -n "${NAMESPACE}" -l control-plane=controller-manager 2>/dev/null | grep -q Running; then
   log_pass "Controller is running"
 else
-  log_fail "Controller is not running in ${NAMESPACE}"
-  exit 1
+  log_info "Controller not found. Deploying with 'make deploy'..."
+  make deploy IMG="$(grep '^IMG ?=' Makefile | awk -F'= ' '{print $2}')"
+  log_info "Waiting for controller to be ready..."
+  kubectl wait --for=condition=ready pod -l control-plane=controller-manager -n "$NAMESPACE" --timeout=120s 2>/dev/null || true
+  if kubectl get pods -n "${NAMESPACE}" -l control-plane=controller-manager 2>/dev/null | grep -q Running; then
+    log_pass "Controller is running"
+  else
+    log_fail "Failed to deploy controller in ${NAMESPACE}"
+    exit 1
+  fi
 fi
 
 # Clean up any previous test resources
