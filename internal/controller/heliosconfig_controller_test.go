@@ -15,7 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -435,5 +437,37 @@ var _ = Describe("HeliosConfig Controller", func() {
 			err := k8sClient.Get(ctx, namespacedName, heliosConfig)
 			return errors.IsNotFound(err)
 		}, time.Second*10, time.Second).Should(BeTrue())
+	})
+})
+
+var _ = Describe("SetupWithManager", func() {
+	It("should register controller with manager successfully", func() {
+		networkMgr := network.NewNetworkManager()
+		balancer := loadbalancer.NewLoadBalancer(loadbalancer.BalancerConfig{
+			Type:           loadbalancer.RoundRobin,
+			HealthCheck:    true,
+			CheckInterval:  time.Second * 5,
+			MetricsEnabled: true,
+		})
+		metricsRecorder := metrics.NewMetricsRecorder()
+
+		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme: k8sClient.Scheme(),
+			Metrics: server.Options{
+				BindAddress: "0",
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		reconciler := &HeliosConfigReconciler{
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			NetworkMgr: networkMgr,
+			Balancer:   balancer,
+			Metrics:    metricsRecorder,
+		}
+
+		err = reconciler.SetupWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
