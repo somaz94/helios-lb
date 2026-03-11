@@ -84,14 +84,19 @@ if kubectl get pods -n "${NAMESPACE}" -l control-plane=controller-manager 2>/dev
 else
   log_info "Controller not found. Deploying with 'make deploy'..."
   make deploy IMG="$(grep '^IMG ?=' Makefile | awk -F'= ' '{print $2}')"
+  log_info "Waiting for controller pod to be created..."
+  for i in $(seq 1 60); do
+    if kubectl get pods -n "$NAMESPACE" -l control-plane=controller-manager -o name 2>/dev/null | grep -q .; then
+      break
+    fi
+    sleep 2
+  done
   log_info "Waiting for controller to be ready..."
-  kubectl wait --for=condition=ready pod -l control-plane=controller-manager -n "$NAMESPACE" --timeout=120s 2>/dev/null || true
-  if kubectl get pods -n "${NAMESPACE}" -l control-plane=controller-manager 2>/dev/null | grep -q Running; then
-    log_pass "Controller is running"
-  else
+  if ! kubectl wait --for=condition=ready pod -l control-plane=controller-manager -n "$NAMESPACE" --timeout=180s; then
     log_fail "Failed to deploy controller in ${NAMESPACE}"
     exit 1
   fi
+  log_pass "Controller is running"
 fi
 
 # Clean up any previous test resources
