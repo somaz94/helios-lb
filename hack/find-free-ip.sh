@@ -17,6 +17,36 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+usage() {
+  echo "Usage: $0 [START_IP] [END_IP] [COUNT]"
+  echo ""
+  echo "Scan a range of IPs and find unused ones for helios-lb testing."
+  echo ""
+  echo "Arguments:"
+  echo "  START_IP    First IP to scan (default: 10.10.10.100)"
+  echo "  END_IP      Last IP to scan  (default: 10.10.10.110)"
+  echo "  COUNT       Number of free IPs needed (default: 2)"
+  echo ""
+  echo "Environment variables:"
+  echo "  SCAN_TIMEOUT  Ping timeout in seconds (default: 1)"
+  echo ""
+  echo "Examples:"
+  echo "  $0                                      # Scan 10.10.10.100-110"
+  echo "  $0 192.168.1.100 192.168.1.120          # Custom range"
+  echo "  $0 172.30.0.50 172.30.0.70 3            # Find 3 free IPs"
+  echo ""
+  echo "Via Makefile:"
+  echo "  make find-free-ip"
+  echo "  make find-free-ip START_IP=192.168.1.100 END_IP=192.168.1.120"
+  echo "  make find-free-ip START_IP=172.30.0.50 END_IP=172.30.0.70 COUNT=3"
+  exit 0
+}
+
+# Show help if requested
+case "${1:-}" in
+  -h|--help|help) usage ;;
+esac
+
 START_IP="${1:-10.10.10.100}"
 END_IP="${2:-10.10.10.110}"
 NEED_COUNT="${3:-2}"
