@@ -102,12 +102,17 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Filter LoadBalancer services
+	// Filter LoadBalancer services managed by helios-lb
 	var lbServices []corev1.Service
 	for _, svc := range services.Items {
-		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-			lbServices = append(lbServices, svc)
+		if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+			continue
 		}
+		// Skip services managed by other LB controllers
+		if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != "helios-lb" {
+			continue
+		}
+		lbServices = append(lbServices, svc)
 	}
 	services.Items = lbServices
 

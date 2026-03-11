@@ -726,6 +726,122 @@ func TestReconcile_ServiceAlreadyHasIngress(t *testing.T) {
 	}
 }
 
+func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
+	scheme := newTestScheme()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100",
+			Method:  "RoundRobin",
+		},
+	}
+	metallbClass := "metallb"
+	// Service managed by another LB controller (e.g. MetalLB)
+	otherLBSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "metallb-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:              corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP:    "192.168.1.100",
+			LoadBalancerClass: &metallbClass,
+			Ports:             []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, otherLBSvc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Error("expected requeue after")
+	}
+
+	// Verify the other LB's service was NOT modified
+	var svc corev1.Service
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "metallb-svc", Namespace: "default"}, &svc)
+	if err != nil {
+		t.Fatalf("failed to get service: %v", err)
+	}
+	if len(svc.Status.LoadBalancer.Ingress) > 0 {
+		t.Error("helios-lb should NOT allocate IP to services with different loadBalancerClass")
+	}
+	if svc.Annotations != nil {
+		if _, ok := svc.Annotations["balancer.helios.dev/load-balancer-class"]; ok {
+			t.Error("helios-lb should NOT annotate services with different loadBalancerClass")
+		}
+	}
+}
+
+func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
+	scheme := newTestScheme()
+	heliosClass := "helios-lb"
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100",
+			Method:  "RoundRobin",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:              corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP:    "192.168.1.100",
+			LoadBalancerClass: &heliosClass,
+			Ports:             []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Error("expected requeue after")
+	}
+
+	// Verify helios-lb class service WAS processed
+	var updatedSvc corev1.Service
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "helios-svc", Namespace: "default"}, &updatedSvc)
+	if err != nil {
+		t.Fatalf("failed to get service: %v", err)
+	}
+	if len(updatedSvc.Status.LoadBalancer.Ingress) == 0 {
+		t.Error("helios-lb should allocate IP to services with helios-lb loadBalancerClass")
+	}
+}
+
 func TestReconcile_ServiceUpdateError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{

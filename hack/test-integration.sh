@@ -67,6 +67,32 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
 fi
 log_pass "Kubernetes cluster is reachable"
 
+# Detect other LB controllers to avoid conflicts
+DETECTED_LBS=""
+if kubectl get crd ipaddresspools.metallb.io >/dev/null 2>&1; then
+  DETECTED_LBS="${DETECTED_LBS} MetalLB"
+  log_info "Detected MetalLB - checking IP pool conflicts..."
+  METALLB_POOLS=$(kubectl get ipaddresspool -A -o jsonpath='{range .items[*]}{.spec.addresses[*]}{"\n"}{end}' 2>/dev/null || echo "")
+  if echo "$METALLB_POOLS" | grep -q "10.10.10"; then
+    log_info "WARNING: MetalLB has IP pool in 10.10.10.x range. Test IPs may conflict."
+    log_info "MetalLB pools: ${METALLB_POOLS}"
+  else
+    log_pass "No MetalLB IP pool conflict with test range (10.10.10.x)"
+  fi
+fi
+if kubectl get crd ciliumloadbalancerippools.cilium.io >/dev/null 2>&1; then
+  DETECTED_LBS="${DETECTED_LBS} Cilium-LB"
+fi
+if kubectl get crd bgpconfigurations.crd.projectcalico.org >/dev/null 2>&1; then
+  DETECTED_LBS="${DETECTED_LBS} Calico-BGP"
+fi
+if [ -n "$DETECTED_LBS" ]; then
+  log_info "Other LB controllers detected:${DETECTED_LBS}"
+  log_info "Test services use loadBalancerClass=helios-lb to avoid conflicts"
+else
+  log_info "No other LB controllers detected"
+fi
+
 # Auto-install CRD if not found
 if ! kubectl get crd heliosconfigs.balancer.helios.dev >/dev/null 2>&1; then
   log_info "HeliosConfig CRD not found. Installing with 'make install'..."
