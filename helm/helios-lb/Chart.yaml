@@ -2,7 +2,7 @@ apiVersion: v2
 name: helios-lb
 description: A Helm chart for Helios Load Balancer Controller
 type: application
-version: 0.1.0
+version: 0.2.6
 appVersion: "v0.2.6"
 
 # Dependencies and requirements

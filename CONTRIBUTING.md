@@ -8,7 +8,7 @@ Thank you for your interest in contributing to Helios Load Balancer!
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.26+
 - Docker 17.03+
 - kubectl v1.11.3+
 - Access to a Kubernetes cluster (Kind recommended for local development)
@@ -84,8 +84,11 @@ Then create a Pull Request on GitHub.
 ```
 api/v1/                  # CRD type definitions
 internal/controller/     # Controller reconciliation logic
+internal/loadbalancer/   # Load balancing algorithms
+internal/network/        # IP allocation and network management
 config/                  # Kustomize configs, CRDs, RBAC, samples
 helm/                    # Helm chart
+hack/                    # Test scripts (integration, helm)
 docs/                    # Documentation
 ```
 
@@ -96,6 +99,8 @@ docs/                    # Documentation
 ```bash
 make test                # Unit tests
 make test-e2e            # E2E tests (requires Kind cluster)
+make test-integration    # Integration tests (requires live cluster)
+make test-helm           # Helm chart tests (lint, install, sync tests, uninstall)
 ```
 
 <br/>
