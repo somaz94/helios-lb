@@ -34,7 +34,8 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.65"
+  # IMPORTANT: Replace with an unused IP in your network (use 'make find-free-ip')
+  loadBalancerIP: "<YOUR_FREE_IP>"
   ports:
   - port: 80
     targetPort: 80

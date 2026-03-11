@@ -85,6 +85,10 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 	}
 	go test ./test/e2e/ -v -ginkgo.v
 
+.PHONY: find-free-ip
+find-free-ip: ## Scan for available IPs before running integration tests.
+	@bash hack/find-free-ip.sh $(START_IP) $(END_IP) $(COUNT)
+
 .PHONY: test-integration
 test-integration: ## Run integration tests against a live cluster.
 	@bash hack/test-integration.sh
