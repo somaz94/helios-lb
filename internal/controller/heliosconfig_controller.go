@@ -120,7 +120,8 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 			if err != nil {
 				log.Error(err, "failed to allocate IP", "service", svc.Name)
-				heliosConfig.Status.Phase = "Failed"
+				heliosConfig.Status.Phase = balancerv1.StateFailed
+				heliosConfig.Status.State = balancerv1.StateFailed
 				heliosConfig.Status.Message = err.Error()
 				if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
 					log.Error(statusErr, "failed to update status")
@@ -170,6 +171,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			heliosConfig.Status.AllocatedIPs[svc.Name] = ip
 			heliosConfig.Status.Phase = balancerv1.StateActive
+			heliosConfig.Status.State = balancerv1.StateActive
 			heliosConfig.Status.Message = "IP allocated successfully"
 			if err := r.Status().Update(ctx, &heliosConfig); err != nil {
 				log.Error(err, "failed to update HeliosConfig status")
