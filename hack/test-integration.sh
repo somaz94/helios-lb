@@ -157,10 +157,21 @@ log_pass "HeliosConfig CRD is installed"
 
 # Auto-deploy controller if not running
 if kubectl get pods -n "${NAMESPACE}" -l control-plane=controller-manager 2>/dev/null | grep -q Running; then
+  # Ensure imagePullPolicy is Always for testing
+  kubectl patch deployment helios-lb-controller-manager -n "$NAMESPACE" \
+    -p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"Always"}]}}}}' 2>/dev/null || true
+  # Wait for rollout if patch triggered restart
+  kubectl rollout status deployment/helios-lb-controller-manager -n "$NAMESPACE" --timeout=120s 2>/dev/null || true
   log_pass "Controller is running"
 else
   log_info "Controller not found. Deploying with 'make deploy'..."
   make deploy IMG="$(grep '^IMG ?=' Makefile | awk -F'= ' '{print $2}')"
+  # Force image pull to ensure latest image is used during testing
+  kubectl set image deployment/helios-lb-controller-manager \
+    manager="$(grep '^IMG ?=' Makefile | awk -F'= ' '{print $2}')" \
+    -n "$NAMESPACE" 2>/dev/null || true
+  kubectl patch deployment helios-lb-controller-manager -n "$NAMESPACE" \
+    -p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"Always"}]}}}}' 2>/dev/null || true
   log_info "Waiting for controller pod to be created..."
   for i in $(seq 1 60); do
     if kubectl get pods -n "$NAMESPACE" -l control-plane=controller-manager -o name 2>/dev/null | grep -q .; then

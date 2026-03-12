@@ -64,12 +64,13 @@ spec:
           - --leader-elect
           - --health-probe-bind-address=:9082
         image: controller:latest
+        imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
-          privileged: true
+          allowPrivilegeEscalation: false
           capabilities:
-            add: 
-            - ALL  # 모든 capabilities 허용
+            drop:
+            - ALL
         lifecycle:
           preStop:
             exec:
