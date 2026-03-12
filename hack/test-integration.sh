@@ -93,6 +93,14 @@ cleanup_test_resources() {
   cleanup_cr
 }
 
+final_cleanup() {
+  echo ""
+  log_info "--- Final Cleanup (trap) ---"
+  cleanup_test_resources
+  make undeploy 2>&1 | tail -3 || true
+}
+trap final_cleanup EXIT
+
 echo ""
 log_info "========================================="
 log_info "Helios LB Integration Test"
@@ -420,11 +428,7 @@ else
   log_fail "Cleanup: HeliosConfig still exists"
 fi
 
-# ── Cleanup ──
-echo ""
-log_info "--- Cleanup ---"
-cleanup_test_resources
-
+# ── Summary ──
 echo ""
 log_info "========================================="
 log_info "Integration Test Summary"
