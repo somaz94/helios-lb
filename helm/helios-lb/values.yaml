@@ -1,4 +1,6 @@
 # Default values for helios-lb.
+replicaCount: 1
+
 nameOverride: ""
 fullnameOverride: ""
 

@@ -348,15 +348,15 @@ func TestReconcile_HeliosStatusUpdateError(t *testing.T) {
 		Build()
 	r := newTestReconciler(cl)
 
-	// HeliosConfig status update error is logged but not returned
-	result, err := r.Reconcile(context.Background(), reconcile.Request{
+	// HeliosConfig status update error should now be returned
+	_, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
 	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("expected error from status update failure")
 	}
-	if result.RequeueAfter == 0 {
-		t.Error("expected requeue after")
+	if err.Error() != "helios status update error" {
+		t.Errorf("expected helios status update error, got: %v", err)
 	}
 }
 

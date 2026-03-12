@@ -41,7 +41,7 @@ func (lb *LoadBalancer) roundRobinBackend(backends []*Backend) *Backend {
 
 	serviceName := backends[0].ServiceName
 
-	// rrStates에 대한 초기화 및 ��근을 분리
+	// Initialize and access rrStates separately
 	lb.mu.Lock()
 	if _, exists := lb.rrStates[serviceName]; !exists {
 		lb.rrStates[serviceName] = &RoundRobinState{}
@@ -49,7 +49,7 @@ func (lb *LoadBalancer) roundRobinBackend(backends []*Backend) *Backend {
 	state := lb.rrStates[serviceName]
 	lb.mu.Unlock()
 
-	// atomic 연산으로 안전하게 처리
+	// Thread-safe index increment using atomic operation
 	index := atomic.AddUint32(&state.current, 1) % uint32(len(backends))
 	return backends[index]
 }

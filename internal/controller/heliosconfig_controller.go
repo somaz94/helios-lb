@@ -55,15 +55,6 @@ type HeliosConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the HeliosConfig object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 const (
 	heliosConfigFinalizer = "balancer.helios.dev/finalizer"
 )
@@ -76,7 +67,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// 메트릭 기록
+	// Record metrics on defer
 	defer func() {
 		r.Metrics.RecordLBStatus(heliosConfig.Name, heliosConfig.Namespace,
 			heliosConfig.Status.Phase == balancerv1.StateActive)
@@ -118,14 +109,14 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
-		// heliosConfig에서 할당한 IP를 가진 서비스인지 확인
+		// Check if the service is managed by this HeliosConfig
 		isHeliosService := false
 		if svc.Spec.LoadBalancerIP == heliosConfig.Spec.IPRange {
 			isHeliosService = true
 		}
 
 		if len(svc.Status.LoadBalancer.Ingress) == 0 && isHeliosService {
-			// IP 할당
+			// Allocate IP
 			ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 			if err != nil {
 				log.Error(err, "failed to allocate IP", "service", svc.Name)
@@ -137,9 +128,9 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return ctrl.Result{}, err
 			}
 
-			// 서비스 업데이트를 위한 재시도 로직
+			// Retry on conflict for service update
 			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				// 최신 서비스 상태 가져오기
+				// Get the latest service state
 				var currentSvc corev1.Service
 				if err := r.Get(ctx, types.NamespacedName{
 					Namespace: svc.Namespace,
@@ -148,21 +139,21 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					return err
 				}
 
-				// 어노테이션 추가
+				// Add annotation
 				if currentSvc.Annotations == nil {
 					currentSvc.Annotations = make(map[string]string)
 				}
 				currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
 
-				// spec에 loadBalancerClass 추가
+				// Set loadBalancerClass in spec
 				currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
 
-				// 상태 업데이트도 함께
+				// Update status with allocated IP
 				currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
 					{IP: ip},
 				}
 
-				// 한 번에 업데이트
+				// Update service spec
 				if err := r.Status().Update(ctx, &currentSvc); err != nil {
 					return err
 				}
@@ -173,7 +164,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				continue
 			}
 
-			// HeliosConfig 상태 업데이트
+			// Update HeliosConfig status
 			if heliosConfig.Status.AllocatedIPs == nil {
 				heliosConfig.Status.AllocatedIPs = make(map[string]string)
 			}
@@ -182,6 +173,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			heliosConfig.Status.Message = "IP allocated successfully"
 			if err := r.Status().Update(ctx, &heliosConfig); err != nil {
 				log.Error(err, "failed to update HeliosConfig status")
+				return ctrl.Result{}, err
 			}
 
 			// Record metrics
@@ -241,8 +233,10 @@ func (r *HeliosConfigReconciler) findLoadBalancerServices(ctx context.Context, o
 	}
 
 	// Get the HeliosConfig
+	log := log.FromContext(ctx)
 	var heliosConfigs balancerv1.HeliosConfigList
 	if err := r.List(ctx, &heliosConfigs); err != nil {
+		log.Error(err, "failed to list HeliosConfigs in service watch handler")
 		return nil
 	}
 

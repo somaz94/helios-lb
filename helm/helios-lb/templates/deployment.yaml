@@ -46,10 +46,7 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:
-          capabilities:
-            add:
-            - ALL
-          privileged: true
+          {{- toYaml .Values.securityContext | nindent 12 }}
         lifecycle:
           preStop:
             exec:
