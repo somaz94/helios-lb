@@ -15,6 +15,9 @@ CHART_DIR="helm/helios-lb"
 RELEASE_NAME="hlb-test"
 NAMESPACE="helios-lb-system"
 
+# Configurable test IP via environment variable
+TEST_IP="${TEST_IP:-10.10.10.100}"
+
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
 log_fail()  { echo -e "${RED}[FAIL]${NC} $1"; FAIL=$((FAIL+1)); }
@@ -35,6 +38,15 @@ wait_for_active() {
   return 1
 }
 
+cleanup_cr() {
+  kubectl delete heliosconfig --all -n default --ignore-not-found 2>/dev/null || true
+  sleep 2
+  # Clear service ingress status so next test can re-allocate IPs
+  kubectl patch svc test-svc1 -n default --subresource=status \
+    -p '{"status":{"loadBalancer":{}}}' --type=merge 2>/dev/null || true
+  sleep 1
+}
+
 cleanup_test_resources() {
   kubectl delete heliosconfig --all -n default --ignore-not-found 2>/dev/null || true
   kubectl delete svc test-svc1 -n default --ignore-not-found 2>/dev/null || true
@@ -42,10 +54,22 @@ cleanup_test_resources() {
   sleep 2
 }
 
+final_cleanup() {
+  echo ""
+  log_info "--- Final Cleanup (trap) ---"
+  cleanup_test_resources
+  kubectl delete crd heliosconfigs.balancer.helios.dev --ignore-not-found 2>/dev/null || true
+  helm uninstall "${RELEASE_NAME}" --no-hooks 2>/dev/null || true
+  kubectl delete ns "${NAMESPACE}" --ignore-not-found 2>/dev/null || true
+}
+trap final_cleanup EXIT
+
 echo ""
 log_info "========================================="
 log_info "Helios LB Helm Test"
 log_info "========================================="
+log_info "Using test IP: TEST_IP=${TEST_IP}"
+log_info "Find free IPs: make find-free-ip  |  Override: TEST_IP=<free-ip> make test-helm"
 echo ""
 
 # ── Helm Lint ──
@@ -137,7 +161,7 @@ fi
 
 # ── Create test resources ──
 log_info "Creating test LoadBalancer service..."
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -174,7 +198,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.100"
+  loadBalancerIP: "${TEST_IP}"
   ports:
   - port: 80
     targetPort: 80
@@ -188,14 +212,14 @@ kubectl wait --for=condition=available deploy/test-nginx -n default --timeout=60
 echo ""
 log_info "--- [Test] Basic HeliosConfig ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-basic
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
 EOF
 
@@ -212,21 +236,20 @@ else
   log_skip "Basic: No IP allocated"
 fi
 
-kubectl delete heliosconfig test-basic -n default --timeout=30s 2>/dev/null || true
-sleep 2
+cleanup_cr
 
 # ── Test: Port-based HeliosConfig ──
 echo ""
 log_info "--- [Test] Port-based HeliosConfig ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-port
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
   ports:
     - port: 80
@@ -239,21 +262,20 @@ else
   log_fail "Port: HeliosConfig not Active"
 fi
 
-kubectl delete heliosconfig test-port -n default --timeout=30s 2>/dev/null || true
-sleep 2
+cleanup_cr
 
 # ── Test: Cleanup on Deletion ──
 echo ""
 log_info "--- [Test] Cleanup on Deletion ---"
 
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
   name: test-cleanup
   namespace: default
 spec:
-  ipRange: "10.10.10.100"
+  ipRange: "${TEST_IP}"
   method: RoundRobin
 EOF
 
@@ -276,17 +298,7 @@ else
   log_skip "Helm upgrade output did not match (may still be OK)"
 fi
 
-# ── Cleanup ──
-echo ""
-log_info "--- Cleanup ---"
-cleanup_test_resources
-
-log_info "Uninstalling Helm release..."
-kubectl delete crd heliosconfigs.balancer.helios.dev --ignore-not-found 2>/dev/null || true
-helm uninstall "${RELEASE_NAME}" --no-hooks 2>/dev/null || true
-
-kubectl delete ns "${NAMESPACE}" --ignore-not-found 2>/dev/null || true
-
+# ── Summary ──
 echo ""
 log_info "========================================="
 log_info "Helm Test Summary"
