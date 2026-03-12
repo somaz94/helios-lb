@@ -97,7 +97,7 @@ final_cleanup() {
   echo ""
   log_info "--- Final Cleanup (trap) ---"
   cleanup_test_resources
-  make undeploy 2>&1 | tail -3 || true
+  make undeploy || true
 }
 trap final_cleanup EXIT
 
