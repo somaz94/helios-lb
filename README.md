@@ -11,7 +11,7 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 
 - Automatic IP address allocation for LoadBalancer services
 - Support for IP ranges in CIDR or range format
-- Multiple load balancing methods (Round Robin, Least Connection, Weighted Round Robin, IP Hash, Random)
+- Multiple load balancing methods (Round Robin, Least Connection)
 - ARP-based layer 2 mode
 - Configurable network interface
 - Customizable ARP announcement intervals
@@ -87,8 +87,54 @@ This way, you can leverage both load balancers in your cluster, each managing it
 
 ## Installation
 
+<br/>
+
+### Prerequisites
+- Kubernetes v1.16+
+- kubectl v1.11.3+
+
+<br/>
+
+### Option 1: Helm (Recommended)
+
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
+# Add the Helm repository
+helm repo add helios-lb https://somaz94.github.io/helios-lb/helm-repo
+helm repo update
+
+# Install with default values
+helm install helios-lb helios-lb/helios-lb
+
+# Or install with custom values
+helm install helios-lb helios-lb/helios-lb \
+  --set image.tag=v0.2.6 \
+  --namespace helios-lb-system --create-namespace
+```
+
+For full Helm chart options, see [Helm README](docs/HELM.md).
+
+<br/>
+
+### Option 2: kubectl apply (Quick Install)
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/somaz94/helios-lb/main/dist/install.yaml
+```
+
+<br/>
+
+### Option 3: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/somaz94/helios-lb.git
+cd helios-lb
+
+# Install CRDs
+make install
+
+# Deploy the controller
+make deploy IMG=somaz940/helios-lb:v0.2.6
 ```
 
 <br/>
@@ -203,7 +249,7 @@ You should see an external IP assigned from your configured IP range.
 ### HeliosConfig Options
 
 - `ipRange`: IP range for allocation (required) - supports both range format (192.168.1.100-192.168.1.200) and CIDR format (192.168.1.0/24)
-- `method`: Load balancing method (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection)
+- `method`: Load balancing method (RoundRobin, LeastConnection)
 - `ports`: Port configuration for the service (default: 80)
 - `protocol`: Protocol type (default: TCP)
 - `healthCheckInterval`: Health check interval in seconds (default: 5)
@@ -252,7 +298,7 @@ This ensures that:
 
 ### Load Balancing Algorithms
 
-Helios-LB supports multiple load balancing algorithms:
+Helios-LB supports the following load balancing algorithms:
 
 1. **Round Robin (Default)**
    ```yaml
@@ -270,34 +316,10 @@ Helios-LB supports multiple load balancing algorithms:
    - Directs traffic to backend with fewest active connections
    - Ideal for long-lived connections
 
-3. **Weighted Round Robin**
-   ```yaml
-   spec:
-     method: WeightedRoundRobin
-     weights:
-       - serviceName: "service1"
-         weight: 3
-       - serviceName: "service2"
-         weight: 1
-   ```
-   - Like Round Robin but with weighted distribution
-   - Higher weight receives proportionally more traffic
-
-4. **IP Hash**
-   ```yaml
-   spec:
-     method: IPHash
-   ```
-   - Consistently maps client IPs to same backend
-   - Useful for session persistence
-
-5. **Random Selection**
-   ```yaml
-   spec:
-     method: RandomSelection
-   ```
-   - Randomly selects from healthy backends
-   - Simple but effective for even distribution
+**Planned:**
+- Weighted Round Robin
+- IP Hash
+- Random Selection
 
 <br/>
 
@@ -337,7 +359,7 @@ kubectl delete heliosconfig <heliosconfig-name>
 
 3. Remove the controller:
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/release/install.yaml
+kubectl delete -f https://raw.githubusercontent.com/somaz94/helios-lb/main/dist/install.yaml
 ```
 
 <br/>
@@ -365,7 +387,7 @@ make kustomize      # v5.5.0
 make envtest        # v0.19.0
 
 # Install golangci-lint
-make golangci-lint  # v1.61.0
+make golangci-lint  # v2.1.6
 ```
 
 Manual installation locations:
@@ -374,7 +396,7 @@ Manual installation locations:
   - controller-gen v0.16.4
   - kustomize v5.5.0
   - setup-envtest v0.19.0
-  - golangci-lint v1.61.0
+  - golangci-lint v2.1.6
 
 Note: The binary directory (`./bin`) is git-ignored and will be created when needed.
 

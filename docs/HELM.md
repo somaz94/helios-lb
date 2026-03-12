@@ -1,7 +1,7 @@
 # Helios Load Balancer Helm Chart
 
 ## Introduction
-This Helm chart installs Helios Load Balancer Controller on your Kubernetes cluster. The controller provides load balancing functionality with various methods including RoundRobin and WeightedRoundRobin.
+This Helm chart installs Helios Load Balancer Controller on your Kubernetes cluster. The controller provides load balancing functionality with methods including RoundRobin and LeastConnection.
 
 ## Prerequisites
 - Kubernetes 1.16+
@@ -36,7 +36,7 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `nameOverride` | Override the name of the chart | `""` |
 | `fullnameOverride` | Override the full name of the chart | `""` |
 | `image.repository` | Controller image repository | `somaz940/helios-lb` |
-| `image.tag` | Controller image tag | `v0.2.4` |
+| `image.tag` | Controller image tag | `v0.2.6` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 | `serviceAccount.create` | Create ServiceAccount | `true` |
@@ -82,11 +82,6 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `customresource.port.ipRange` | IP range for port configuration | `10.10.10.65` |
 | `customresource.port.method` | Load balancing method for port configuration | `RoundRobin` |
 | `customresource.port.ports` | Ports configuration | `[{port: 80}, {port: 443}]` |
-| `customresource.weight.enabled` | Enable weighted configuration | `false` |
-| `customresource.weight.name` | Weighted configuration name | `heliosconfig-weight` |
-| `customresource.weight.ipRange` | IP range for weighted configuration | `10.10.10.65` |
-| `customresource.weight.ports` | Ports for weighted configuration | `[{port: 80}, {port: 443}]` |
-| `customresource.weight.weights` | Service weights configuration | `[{serviceName: "service1", weight: 3}, {serviceName: "service2", weight: 2}, {serviceName: "service3", weight: 1}]` |
 
 ## Custom Resource Configuration
 
@@ -113,25 +108,6 @@ customresource:
     ports:
       - port: 80
       - port: 443
-```
-
-### Weighted Configuration
-```yaml
-customresource:
-  weight:
-    enabled: true
-    name: "heliosconfig-weight"
-    ipRange: "10.10.10.65"
-    ports:
-      - port: 80
-      - port: 443
-    weights:
-      - serviceName: "service1"
-        weight: 3
-      - serviceName: "service2"
-        weight: 2
-      - serviceName: "service3"
-        weight: 1
 ```
 
 Local install Method:

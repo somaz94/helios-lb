@@ -5,7 +5,7 @@ metadata:
 spec:
   # IMPORTANT: Replace with an unused IP in your network (use 'make find-free-ip')
   ipRange: "<YOUR_FREE_IP>"
-  method: RoundRobin #  Optional: Load balancing method (defaults to RoundRobin) Enable Value: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, RandomSelection
+  method: RoundRobin #  Optional: Load balancing method (defaults to RoundRobin) Enable Value: RoundRobin, LeastConnection
   ports:
     - port: 80
     - port: 443

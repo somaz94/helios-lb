@@ -469,7 +469,8 @@ spec:
         - --health-probe-bind-address=:9082
         command:
         - /manager
-        image: somaz940/helios-lb:v0.2.5
+        image: somaz940/helios-lb:v0.2.6
+        imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
             exec:
@@ -498,10 +499,10 @@ spec:
             cpu: 10m
             memory: 64Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
-            add:
+            drop:
             - ALL
-          privileged: true
       securityContext:
         runAsNonRoot: true
       serviceAccountName: helios-lb-controller-manager
