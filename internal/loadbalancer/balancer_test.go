@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"net"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -427,4 +428,235 @@ func TestLoadBalancerOperations(t *testing.T) {
 			t.Error("Expected positive health check interval")
 		}
 	})
+}
+
+func TestEdgeCases(t *testing.T) {
+	t.Run("NextBackend with non-existent service", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
+		defer lb.Stop()
+
+		got := lb.NextBackend("non-existent", "")
+		if got != nil {
+			t.Error("Expected nil for non-existent service")
+		}
+	})
+
+	t.Run("RoundRobin with empty backends", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
+		defer lb.Stop()
+
+		got := lb.roundRobinBackend(nil)
+		if got != nil {
+			t.Error("Expected nil for empty backends")
+		}
+	})
+
+	t.Run("WeightedRoundRobin with empty backends", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: WeightedRoundRobin})
+		defer lb.Stop()
+
+		got := lb.weightedRoundRobinBackend(nil)
+		if got != nil {
+			t.Error("Expected nil for empty backends")
+		}
+	})
+
+	t.Run("WeightedRoundRobin all unhealthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: WeightedRoundRobin})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "test-svc", 1)
+		backend.SetHealthy(false)
+
+		got := lb.weightedRoundRobinBackend([]*Backend{backend})
+		if got != nil {
+			t.Error("Expected nil when all backends unhealthy")
+		}
+	})
+
+	t.Run("WeightedRoundRobin with config weights", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type: WeightedRoundRobin,
+			Weights: []Weight{
+				{ServiceName: "weighted-svc", Weight: 5},
+			},
+		})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "weighted-svc", 0)
+		backend.SetHealthy(true)
+		lb.AddBackend(backend)
+
+		got := lb.NextBackend("weighted-svc", "")
+		if got == nil {
+			t.Error("Expected backend with config weight")
+		}
+		if backend.Weight != 5 {
+			t.Errorf("Expected weight 5 from config, got %d", backend.Weight)
+		}
+	})
+
+	t.Run("WeightedRoundRobin default weight when no config match", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type: WeightedRoundRobin,
+			Weights: []Weight{
+				{ServiceName: "other-svc", Weight: 10},
+			},
+		})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "no-match-svc", 0)
+		backend.SetHealthy(true)
+		lb.AddBackend(backend)
+
+		got := lb.NextBackend("no-match-svc", "")
+		if got == nil {
+			t.Error("Expected backend with default weight")
+		}
+		if backend.Weight != 1 {
+			t.Errorf("Expected default weight 1, got %d", backend.Weight)
+		}
+	})
+
+	t.Run("WeightedRoundRobin fallback to first healthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{
+			Type: WeightedRoundRobin,
+			Weights: []Weight{
+				{ServiceName: "fb-svc", Weight: 1},
+			},
+		})
+		defer lb.Stop()
+
+		// Multiple backends to trigger fallback path
+		b1 := createTestBackend("192.168.1.1", "fb-svc", 0)
+		b2 := createTestBackend("192.168.1.2", "fb-svc", 0)
+		b3 := createTestBackend("192.168.1.3", "fb-svc", 0)
+		b1.SetHealthy(true)
+		b2.SetHealthy(true)
+		b3.SetHealthy(true)
+		lb.AddBackend(b1)
+		lb.AddBackend(b2)
+		lb.AddBackend(b3)
+
+		// Run enough iterations to trigger the fallback return path
+		for i := 0; i < 100; i++ {
+			got := lb.NextBackend("fb-svc", "")
+			if got == nil {
+				t.Fatal("Expected non-nil backend")
+			}
+		}
+	})
+
+	t.Run("IPHash with empty backends", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: IPHash})
+		defer lb.Stop()
+
+		got := lb.ipHashBackend(nil, "10.0.0.1")
+		if got != nil {
+			t.Error("Expected nil for empty backends")
+		}
+	})
+
+	t.Run("IPHash all unhealthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: IPHash})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "test-svc", 1)
+		backend.SetHealthy(false)
+
+		got := lb.ipHashBackend([]*Backend{backend}, "10.0.0.1")
+		if got != nil {
+			t.Error("Expected nil when all backends unhealthy")
+		}
+	})
+
+	t.Run("RandomBackend with empty backends", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RandomSelection})
+		defer lb.Stop()
+
+		got := lb.randomBackend(nil)
+		if got != nil {
+			t.Error("Expected nil for empty backends")
+		}
+	})
+
+	t.Run("RandomBackend all unhealthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: RandomSelection})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "test-svc", 1)
+		backend.SetHealthy(false)
+
+		got := lb.randomBackend([]*Backend{backend})
+		if got != nil {
+			t.Error("Expected nil when all backends unhealthy")
+		}
+	})
+
+	t.Run("LeastConnection skips unhealthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: LeastConnection})
+		defer lb.Stop()
+
+		unhealthy := createTestBackend("192.168.1.1", "test-svc", 1)
+		unhealthy.SetHealthy(false)
+		unhealthy.Connections = 0
+
+		healthy := createTestBackend("192.168.1.2", "test-svc", 1)
+		healthy.SetHealthy(true)
+		healthy.Connections = 10
+
+		got := lb.leastConnectionBackend([]*Backend{unhealthy, healthy})
+		if got == nil {
+			t.Fatal("Expected non-nil backend")
+		}
+		if got.Address != "192.168.1.2" {
+			t.Error("Expected healthy backend to be selected")
+		}
+	})
+
+	t.Run("LeastConnection all unhealthy", func(t *testing.T) {
+		lb := NewLoadBalancer(BalancerConfig{Type: LeastConnection})
+		defer lb.Stop()
+
+		backend := createTestBackend("192.168.1.1", "test-svc", 1)
+		backend.SetHealthy(false)
+
+		got := lb.leastConnectionBackend([]*Backend{backend})
+		if got != nil {
+			t.Error("Expected nil when all backends unhealthy")
+		}
+	})
+}
+
+func TestHealthCheckSuccessPath(t *testing.T) {
+	// Start a TCP listener to simulate a healthy backend
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to start listener: %v", err)
+	}
+	defer ln.Close()
+
+	addr := ln.Addr().(*net.TCPAddr)
+
+	lb := NewLoadBalancer(BalancerConfig{
+		Type:          RoundRobin,
+		HealthCheck:   true,
+		CheckInterval: time.Millisecond * 50,
+	})
+
+	backend := &Backend{
+		Address:     "127.0.0.1",
+		Port:        addr.Port,
+		ServiceName: "healthy-svc",
+	}
+	backend.SetHealthy(false)
+	lb.AddBackend(backend)
+
+	// Wait for health check to mark it healthy
+	time.Sleep(time.Millisecond * 200)
+	lb.Stop()
+
+	if !backend.IsHealthy() {
+		t.Error("Expected backend to be marked as healthy after successful TCP connection")
+	}
 }
