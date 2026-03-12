@@ -59,7 +59,7 @@ spec:
       serviceAccountName: {{ include "helios-lb.fullname" . }}-crd-cleanup
       containers:
       - name: kubectl
-        image: bitnami/kubectl:latest
+        image: "{{ .Values.crds.cleanup.image.repository }}:{{ .Values.crds.cleanup.image.tag }}"
         command:
         - /bin/sh
         - -c
