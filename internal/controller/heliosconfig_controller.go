@@ -191,11 +191,23 @@ func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfi
 	log := log.FromContext(ctx)
 
 	if controllerutil.ContainsFinalizer(heliosConfig, heliosConfigFinalizer) {
-		// Release all allocated IPs
+		// Release all allocated IPs and clear service ingress
 		for serviceName, ip := range heliosConfig.Status.AllocatedIPs {
 			r.NetworkMgr.ReleaseIP(ip)
 			r.Metrics.RecordIPAllocation(ip, false)
 			log.Info("released IP", "service", serviceName, "ip", ip)
+
+			// Clear the service's LoadBalancer ingress status
+			var svc corev1.Service
+			if err := r.Get(ctx, types.NamespacedName{
+				Name:      serviceName,
+				Namespace: heliosConfig.Namespace,
+			}, &svc); err == nil {
+				svc.Status.LoadBalancer.Ingress = nil
+				if err := r.Status().Update(ctx, &svc); err != nil {
+					log.Error(err, "failed to clear service ingress", "service", serviceName)
+				}
+			}
 		}
 
 		// Remove finalizer

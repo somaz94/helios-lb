@@ -78,6 +78,12 @@ wait_for_active() {
 cleanup_cr() {
   kubectl delete heliosconfig --all -n default --ignore-not-found 2>/dev/null || true
   sleep 2
+  # Clear service ingress status so next test can re-allocate IPs
+  for svc in test-svc1 test-svc2; do
+    kubectl patch svc "$svc" -n default --subresource=status \
+      -p '{"status":{"loadBalancer":{}}}' --type=merge 2>/dev/null || true
+  done
+  sleep 1
 }
 
 cleanup_test_resources() {
