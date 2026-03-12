@@ -158,7 +158,7 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "invalid-ip",
+			IPRange: "192.168.1.100-192.168.1.100",
 			Method:  "RoundRobin",
 		},
 	}
@@ -169,7 +169,7 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "invalid-ip",
+			LoadBalancerIP: "192.168.1.100",
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -189,10 +189,13 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 		Build()
 	r := newTestReconciler(cl)
 
+	// Pre-allocate the only IP in range so AllocateIP returns "no available IPs" error
+	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.100")
+
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
 	})
-	// Should still return the IP allocation error
+	// Should return the IP allocation error (status update also fails but IP error comes first)
 	if err == nil {
 		t.Fatal("expected error from IP allocation, got nil")
 	}

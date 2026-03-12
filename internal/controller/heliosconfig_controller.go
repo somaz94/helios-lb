@@ -109,10 +109,10 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
-		// Check if the service is managed by this HeliosConfig
+		// Check if the service's loadBalancerIP falls within this HeliosConfig's IP range
 		isHeliosService := false
-		if svc.Spec.LoadBalancerIP == heliosConfig.Spec.IPRange {
-			isHeliosService = true
+		if svc.Spec.LoadBalancerIP != "" {
+			isHeliosService = network.IPInRange(svc.Spec.LoadBalancerIP, heliosConfig.Spec.IPRange)
 		}
 
 		if len(svc.Status.LoadBalancer.Ingress) == 0 && isHeliosService {

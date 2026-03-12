@@ -88,6 +88,19 @@ func (a *IPAllocator) AllocateIP(ipRange string) (string, error) {
 	return "", fmt.Errorf("no available IPs in range %s", ipRange)
 }
 
+// IPInRange checks if the given IP string falls within the specified range.
+func IPInRange(ip string, ipRange string) bool {
+	target := net.ParseIP(strings.TrimSpace(ip))
+	if target == nil {
+		return false
+	}
+	start, end, err := parseIPRange(ipRange)
+	if err != nil {
+		return false
+	}
+	return bytes.Compare(target, start) >= 0 && bytes.Compare(target, end) <= 0
+}
+
 // ReleaseIP releases an allocated IP
 func (a *IPAllocator) ReleaseIP(ip string) {
 	a.mu.Lock()
