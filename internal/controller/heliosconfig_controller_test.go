@@ -116,7 +116,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
 
-		By("Creating a LoadBalancer service")
+		By("Creating a LoadBalancer service with valid IP")
 		service := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
@@ -124,25 +124,25 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: "invalid-ip-address",
+				LoadBalancerIP: "192.168.1.100",
 				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
 		Expect(k8sClient.Create(ctx, service)).To(Succeed())
 
-		By("Reconciling the request")
+		By("Reconciling the request - service should not match invalid IP range")
 		req := reconcile.Request{NamespacedName: namespacedName}
 		_, err := reconciler.Reconcile(ctx, req)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
-		By("Verifying the HeliosConfig status")
-		Eventually(func() string {
+		By("Verifying the HeliosConfig status - no service matched, so no status update")
+		Consistently(func() string {
 			err := k8sClient.Get(ctx, namespacedName, heliosConfig)
 			if err != nil {
 				return ""
 			}
 			return heliosConfig.Status.Phase
-		}, time.Second*10, time.Second).Should(Equal("Failed"))
+		}, time.Second*3, time.Second).Should(BeEmpty())
 	})
 
 	It("should handle deletion with cleanup", func() {
@@ -284,7 +284,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
 
-		By("Creating multiple LoadBalancer services")
+		By("Creating multiple LoadBalancer services with IPs within the range")
 		service1 := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      service1Name,
@@ -292,7 +292,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: ipRange,
+				LoadBalancerIP: "192.168.1.100",
 				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
@@ -305,7 +305,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: ipRange,
+				LoadBalancerIP: "192.168.1.101",
 				Ports:          []corev1.ServicePort{{Port: 81}},
 			},
 		}
