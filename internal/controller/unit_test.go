@@ -845,6 +845,195 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 	}
 }
 
+func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
+	scheme := newTestScheme()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.101",
+			Method:  "RoundRobin",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP: "192.168.1.100",
+			Ports:          []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	// Pre-allocate all IPs in the range so AllocateIP returns "no available IPs" error
+	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
+	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
+
+	_, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	// Should return the IP allocation error
+	if err == nil {
+		t.Fatal("expected error from IP allocation, got nil")
+	}
+
+	// Verify the HeliosConfig status was updated to Failed
+	var updated balancerv1.HeliosConfig
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updated); getErr != nil {
+		t.Fatalf("failed to get HeliosConfig: %v", getErr)
+	}
+	if updated.Status.Phase != balancerv1.StateFailed {
+		t.Errorf("expected phase Failed, got %s", updated.Status.Phase)
+	}
+	if updated.Status.Message == "" {
+		t.Error("expected non-empty error message in status")
+	}
+}
+
+func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
+	scheme := newTestScheme()
+	now := metav1.Now()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test-helios",
+			Namespace:         "default",
+			Finalizers:        []string{heliosConfigFinalizer},
+			DeletionTimestamp: &now,
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.101",
+			Method:  "RoundRobin",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-1": "192.168.1.100",
+			},
+			Phase: balancerv1.StateActive,
+		},
+	}
+
+	// Create the service that exists - so the Get in handleDeletion succeeds
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-1",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "192.168.1.100"}},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.RequeueAfter != 0 {
+		t.Errorf("expected no requeue, got %v", result.RequeueAfter)
+	}
+
+	// Verify the service's ingress was cleared
+	var updatedSvc corev1.Service
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "svc-1", Namespace: "default"}, &updatedSvc); getErr != nil {
+		t.Fatalf("failed to get service: %v", getErr)
+	}
+	if len(updatedSvc.Status.LoadBalancer.Ingress) != 0 {
+		t.Error("expected service ingress to be cleared after deletion")
+	}
+}
+
+func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
+	scheme := newTestScheme()
+	now := metav1.Now()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test-helios",
+			Namespace:         "default",
+			Finalizers:        []string{heliosConfigFinalizer},
+			DeletionTimestamp: &now,
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100",
+			Method:  "RoundRobin",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-1": "192.168.1.100",
+			},
+			Phase: balancerv1.StateActive,
+		},
+	}
+
+	// Create the service so Get succeeds
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-1",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "192.168.1.100"}},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				if _, ok := obj.(*corev1.Service); ok {
+					return fmt.Errorf("service status clear error")
+				}
+				return c.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := newTestReconciler(cl)
+
+	// Should not fail - the error is just logged
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.RequeueAfter != 0 {
+		t.Errorf("expected no requeue, got %v", result.RequeueAfter)
+	}
+}
+
 func TestReconcile_ServiceUpdateError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
