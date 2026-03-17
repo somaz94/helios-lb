@@ -109,7 +109,7 @@ kubectl delete crd heliosconfigs.balancer.helios.dev --ignore-not-found 2>/dev/n
 kubectl delete ns "${NAMESPACE}" --ignore-not-found 2>/dev/null || true
 sleep 3
 
-if helm install "${RELEASE_NAME}" "${CHART_DIR}" --wait --timeout 120s 2>&1; then
+if helm install "${RELEASE_NAME}" "${CHART_DIR}" --set image.pullPolicy=Always --wait --timeout 120s 2>&1; then
   log_pass "Helm release deployed successfully"
 else
   log_fail "Helm install failed"
