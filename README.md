@@ -2,12 +2,25 @@
 
 ![Top Language](https://img.shields.io/github/languages/top/somaz94/helios-lb?color=green&logo=go&logoColor=b)
 ![helios-lb](https://img.shields.io/github/v/tag/somaz94/helios-lb?label=helios-lb&logo=kubernetes&logoColor=white)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go Report Card](https://goreportcard.com/badge/github.com/somaz94/helios-lb)](https://goreportcard.com/report/github.com/somaz94/helios-lb)
+![Docker Pulls](https://img.shields.io/docker/pulls/somaz940/helios-lb?logo=docker&logoColor=white)
+![GitHub Release](https://img.shields.io/github/release/somaz94/helios-lb?logo=github)
+![GitHub Stars](https://img.shields.io/github/stars/somaz94/helios-lb?style=social)
 
 Helios Load Balancer is a Kubernetes controller that provides load balancing functionality for bare metal Kubernetes clusters, similar to MetalLB. It automatically assigns IP addresses to LoadBalancer services and manages the network configuration.
 
 <br/>
 
 ## Features
+
+![IP Allocation](https://img.shields.io/badge/IP_Allocation-blue?logo=kubernetes&logoColor=white)
+![CIDR Range](https://img.shields.io/badge/CIDR_Range-blue?logo=kubernetes&logoColor=white)
+![Round Robin](https://img.shields.io/badge/Round_Robin-green?logo=kubernetes&logoColor=white)
+![Least Connection](https://img.shields.io/badge/Least_Connection-green?logo=kubernetes&logoColor=white)
+![ARP Layer2](https://img.shields.io/badge/ARP_Layer2-orange?logo=kubernetes&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus_Metrics-E6522C?logo=prometheus&logoColor=white)
+![Bare Metal](https://img.shields.io/badge/Bare_Metal-326CE5?logo=kubernetes&logoColor=white)
 
 - Automatic IP address allocation for LoadBalancer services
 - Support for IP ranges in CIDR or range format
