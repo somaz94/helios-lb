@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (2026-03-23)
+
+### Bug Fixes
+
+- restore Chart.yaml before gh-pages checkout in helm-release workflow ([a303098](https://github.com/somaz94/helios-lb/commit/a303098359d7976fa0088cec7bf93185fff3e909))
+- prevent duplicate quote in bump-version.sh values.yaml sed pattern ([9c7acfa](https://github.com/somaz94/helios-lb/commit/9c7acfa24ec95460f2a49fbab4189ba9211c2993))
+- remove duplicate quote in values.yaml image tag ([b25c770](https://github.com/somaz94/helios-lb/commit/b25c770b38f59a9dbdd2b9c71439956cf977bdae))
+
+### Code Refactoring
+
+- apply structured logging with consistent key-value patterns ([fcffdb0](https://github.com/somaz94/helios-lb/commit/fcffdb042354391c82a0268f5f3dc61e999566bb))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.3.0](https://github.com/somaz94/helios-lb/compare/v0.2.6...v0.3.0) (2026-03-23)
 
 ### Features
