@@ -57,16 +57,73 @@ spec:
           spec:
             description: HeliosConfigSpec defines the desired state of HeliosConfig.
             properties:
+              healthCheck:
+                description: HealthCheck configures backend health checking
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled enables or disables health checking
+                    type: boolean
+                  httpPath:
+                    description: HTTPPath is the HTTP path for HTTP health checks
+                      (only used when protocol is HTTP)
+                    type: string
+                  intervalSeconds:
+                    default: 5
+                    description: IntervalSeconds is the interval between health checks
+                      in seconds
+                    format: int32
+                    maximum: 300
+                    minimum: 1
+                    type: integer
+                  protocol:
+                    default: TCP
+                    description: Protocol specifies the health check protocol
+                    enum:
+                    - TCP
+                    - HTTP
+                    type: string
+                  timeoutMs:
+                    default: 1000
+                    description: TimeoutMs is the health check timeout in milliseconds
+                    format: int32
+                    maximum: 30000
+                    minimum: 1
+                    type: integer
+                required:
+                - enabled
+                type: object
               ipRange:
-                description: IPRange defines the IP address range for load balancer
+                description: |-
+                  IPRange defines the IP address range for load balancer.
+                  Supports single IP ("192.168.1.100"), range ("192.168.1.100-192.168.1.200"),
+                  and CIDR notation ("192.168.1.0/24").
                 type: string
+              maxAllocations:
+                default: 0
+                description: |-
+                  MaxAllocations limits the maximum number of IP allocations for this config.
+                  0 means unlimited.
+                format: int32
+                minimum: 0
+                type: integer
               method:
                 default: RoundRobin
                 description: Method specifies the load balancing method
                 enum:
                 - RoundRobin
                 - LeastConnection
+                - WeightedRoundRobin
+                - IPHash
+                - Random
                 type: string
+              namespaceSelector:
+                description: |-
+                  NamespaceSelector restricts which namespaces this config manages.
+                  If empty, all namespaces are managed.
+                items:
+                  type: string
+                type: array
               ports:
                 default:
                 - port: 80
@@ -103,6 +160,29 @@ spec:
               service:
                 description: Service references the service to be load balanced
                 type: string
+              weights:
+                description: Weights configures per-service backend weights for WeightedRoundRobin
+                  method
+                items:
+                  description: WeightConfig defines the weight for a specific service
+                    backend
+                  properties:
+                    serviceName:
+                      description: ServiceName is the name of the Kubernetes service
+                      type: string
+                    weight:
+                      default: 1
+                      description: Weight is the relative weight for traffic distribution
+                        (higher = more traffic)
+                      format: int32
+                      maximum: 100
+                      minimum: 1
+                      type: integer
+                  required:
+                  - serviceName
+                  - weight
+                  type: object
+                type: array
             required:
             - ipRange
             type: object
@@ -469,7 +549,7 @@ spec:
         - --health-probe-bind-address=:9082
         command:
         - /manager
-        image: somaz940/helios-lb:v0.2.6
+        image: somaz940/helios-lb:v0.3.0
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
