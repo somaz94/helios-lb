@@ -60,6 +60,43 @@ var (
 		},
 		[]string{"ip_address"},
 	)
+
+	// Reconciliation duration histogram
+	reconcileDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "helios_reconcile_duration_seconds",
+			Help:    "Duration of HeliosConfig reconciliation in seconds",
+			Buckets: prometheus.ExponentialBuckets(0.001, 2, 12), // 1ms to ~4s
+		},
+		[]string{"name", "namespace", "result"},
+	)
+
+	// Reconciliation total counter
+	reconcileTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "helios_reconcile_total",
+			Help: "Total number of reconciliations by result",
+		},
+		[]string{"name", "namespace", "result"},
+	)
+
+	// Requeue reason counter
+	requeueReasonTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "helios_requeue_reason_total",
+			Help: "Total number of requeue events by reason",
+		},
+		[]string{"name", "namespace", "reason"},
+	)
+
+	// IP allocation pool utilization
+	ipPoolUtilization = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "helios_ip_pool_utilization",
+			Help: "Number of allocated IPs per HeliosConfig",
+		},
+		[]string{"name", "namespace"},
+	)
 )
 
 func init() {
@@ -71,6 +108,10 @@ func init() {
 		requestDuration,
 		operationTotal,
 		ipAllocationStatus,
+		reconcileDuration,
+		reconcileTotal,
+		requeueReasonTotal,
+		ipPoolUtilization,
 	)
 }
 
@@ -121,4 +162,20 @@ func (m *MetricsRecorder) RecordIPAllocation(ipAddress string, allocated bool) {
 		value = 1.0
 	}
 	ipAllocationStatus.WithLabelValues(ipAddress).Set(value)
+}
+
+// RecordReconcileDuration records the duration of a reconciliation
+func (m *MetricsRecorder) RecordReconcileDuration(name, namespace, result string, durationSeconds float64) {
+	reconcileDuration.WithLabelValues(name, namespace, result).Observe(durationSeconds)
+	reconcileTotal.WithLabelValues(name, namespace, result).Inc()
+}
+
+// RecordRequeueReason records the reason for a requeue event
+func (m *MetricsRecorder) RecordRequeueReason(name, namespace, reason string) {
+	requeueReasonTotal.WithLabelValues(name, namespace, reason).Inc()
+}
+
+// RecordIPPoolUtilization records the number of allocated IPs for a config
+func (m *MetricsRecorder) RecordIPPoolUtilization(name, namespace string, count int) {
+	ipPoolUtilization.WithLabelValues(name, namespace).Set(float64(count))
 }

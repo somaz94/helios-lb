@@ -61,6 +61,7 @@ const (
 
 func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+	reconcileStart := time.Now()
 
 	var heliosConfig balancerv1.HeliosConfig
 	if err := r.Get(ctx, req.NamespacedName, &heliosConfig); err != nil {
@@ -69,8 +70,16 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Record metrics on defer
 	defer func() {
+		duration := time.Since(reconcileStart).Seconds()
+		result := "success"
+		if heliosConfig.Status.Phase == balancerv1.StateFailed {
+			result = "error"
+		}
+		r.Metrics.RecordReconcileDuration(heliosConfig.Name, heliosConfig.Namespace, result, duration)
 		r.Metrics.RecordLBStatus(heliosConfig.Name, heliosConfig.Namespace,
 			heliosConfig.Status.Phase == balancerv1.StateActive)
+		r.Metrics.RecordIPPoolUtilization(heliosConfig.Name, heliosConfig.Namespace,
+			len(heliosConfig.Status.AllocatedIPs))
 	}()
 
 	// Add finalizer if it doesn't exist
@@ -205,6 +214,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		r.Metrics.RecordIPAllocation(ip, true)
 	}
 
+	r.Metrics.RecordRequeueReason(heliosConfig.Name, heliosConfig.Namespace, "periodic")
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 }
 

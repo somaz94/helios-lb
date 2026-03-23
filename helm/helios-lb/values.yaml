@@ -87,6 +87,15 @@ metrics:
     port: 8443
     annotations: {}
 
+# Webhook configuration (requires cert-manager)
+webhook:
+  enabled: false
+  # cert-manager issuer configuration
+  certManager:
+    # If true, cert-manager Issuer and Certificate resources are created
+    enabled: false
+    issuerName: "helios-lb-selfsigned-issuer"
+
 nodeSelector: {}
 tolerations: []
 affinity: {}
