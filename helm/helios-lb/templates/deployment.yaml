@@ -41,6 +41,9 @@ spec:
         {{- if .Values.controller.leaderElection.enabled }}
         - --leader-elect=true
         {{- end }}
+        {{- if .Values.webhook.enabled }}
+        - --enable-webhook=true
+        {{- end }}
         command:
         - /manager
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -63,8 +66,25 @@ spec:
             port: {{ .Values.probes.readiness.port | default 9082 }}
           initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds | default 5 }}
           periodSeconds: {{ .Values.probes.readiness.periodSeconds | default 10 }}
+        {{- if .Values.webhook.enabled }}
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.webhook.enabled }}
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: {{ include "helios-lb.fullname" . }}-webhook-server-cert
+      {{- end }}
       terminationGracePeriodSeconds: 10
       {{- with .Values.nodeSelector }}
       nodeSelector:
