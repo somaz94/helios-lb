@@ -2,10 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-03-16)
+## Unreleased (2026-03-23)
+
+### Features
+
+- add benchmarks, reconciliation metrics, and cert-manager support ([9b4fc4c](https://github.com/somaz94/helios-lb/commit/9b4fc4c5508d5ee155b65b46ad893c21accd4012))
+- add IPv6 support, namespace isolation, weights, validating webhook ([bfeb6d2](https://github.com/somaz94/helios-lb/commit/bfeb6d2f5adc1bc60e645aafce424af9b3753a5b))
+- add multi-config support, CIDR, algorithm interface, configurable health checks ([db87d19](https://github.com/somaz94/helios-lb/commit/db87d19aa06f8280dcfa021cbe3a5b412ef5da15))
+- add CODEOWNERS ([a17c335](https://github.com/somaz94/helios-lb/commit/a17c335d38bdb429577a6b18de052673d262c09c))
 
 ### Bug Fixes
 
+- make webhook registration conditional to fix e2e test failure ([cd33b07](https://github.com/somaz94/helios-lb/commit/cd33b075ef97ff55a237ddd5ba3b9da781daf3fb))
+- use GITHUB_TOKEN for dependabot auto merge ([25291d2](https://github.com/somaz94/helios-lb/commit/25291d220886deeb9273c9a8cb62054c390b3bd9))
+- re-declare ARG in final stage for OCI labels ([0ee1624](https://github.com/somaz94/helios-lb/commit/0ee16243d7dab9ac90b00c29512f84f6f35b9291))
+- set imagePullPolicy=Always in helm test script ([321a768](https://github.com/somaz94/helios-lb/commit/321a768276b7cfa88b627b6971c6ee96550578a1))
 - skip major version tag deletion on first release ([f16e83c](https://github.com/somaz94/helios-lb/commit/f16e83ce70dac9954b5003f567c8aeab9c3d41ba))
 - pin kubectl image version in CRD cleanup hook ([f246591](https://github.com/somaz94/helios-lb/commit/f246591be8233889f6868f03130a063bbfce0f57))
 - update envtest to match IPInRange service matching logic ([4f11a1d](https://github.com/somaz94/helios-lb/commit/4f11a1d50959e8f97f6dff5c2f9cf2e17515e57e))
@@ -13,28 +24,46 @@ All notable changes to this project will be documented in this file.
 
 ### Documentation
 
+- add webhook and cert-manager documentation ([4c4959a](https://github.com/somaz94/helios-lb/commit/4c4959a72572be15e055e67cfc9b08adf57c4417))
+- update samples, Helm templates, and add controller tests ([8fe0cbb](https://github.com/somaz94/helios-lb/commit/8fe0cbb531d0bc9ea889e24fbb7ab504b8e69c60))
+- update README, samples, and Helm CRD for new features ([9dd337c](https://github.com/somaz94/helios-lb/commit/9dd337cb5030718a65c4d6b90a7690556efa0159))
+- add DEVELOPMENT.md ([c1a3c3d](https://github.com/somaz94/helios-lb/commit/c1a3c3dafb9453a69716a79d1314936937dc6cd2))
+- add no-push rule to CLAUDE.md ([710cf27](https://github.com/somaz94/helios-lb/commit/710cf270e713d46ca4dda882326ea9cb4f1cb6a1))
+- add CLAUDE.md project guide ([3103f67](https://github.com/somaz94/helios-lb/commit/3103f67031d847cc1e45f52443753bdd3797c6ba))
+- add badges to README ([4275af8](https://github.com/somaz94/helios-lb/commit/4275af8cd3cb2fb5dffe5a58a75eb9ff51e244ce))
 - unify installation structure and fix version references ([bf8a5ae](https://github.com/somaz94/helios-lb/commit/bf8a5ae205fa00bbad88b671d5b83ff694e9f985))
-- update CONTRIBUTORS.md ([b00541b](https://github.com/somaz94/helios-lb/commit/b00541bad00978691a385ed06f1be24c777473cf))
-- update changelog ([a6de6a6](https://github.com/somaz94/helios-lb/commit/a6de6a6d9e64cd650002eeb9d9fc3680ced40bd5))
 
 ### Tests
 
+- increase coverage to 90%+ for all packages ([d0eb7fe](https://github.com/somaz94/helios-lb/commit/d0eb7fe7fd4e4e7afcf3004917e472717f1a94cc))
 - increase coverage to 94.7% controller, 100% network ([062e707](https://github.com/somaz94/helios-lb/commit/062e707dfeb224c3470963b4c9a143990c132983))
 
 ### Continuous Integration
 
+- add auto-generated PR body script for make pr ([876c50f](https://github.com/somaz94/helios-lb/commit/876c50ff9bf3d356a7aa6edadd3fdbeae884f016))
+- migrate gitlab-mirror workflow to multi-git-mirror action ([baebb33](https://github.com/somaz94/helios-lb/commit/baebb33d54a02932a7f1e6b231273eb23a2ab15f))
+- use somaz94/contributors-action@v1 for contributors generation ([4117a20](https://github.com/somaz94/helios-lb/commit/4117a20cb23fb7bff6cceb0da431ce86ab798025))
+- use major-tag-action for version tag updates ([bf17783](https://github.com/somaz94/helios-lb/commit/bf177838401c39015a692424c3f10be6cebb73f6))
 - migrate changelog generator to go-changelog-action ([71d779d](https://github.com/somaz94/helios-lb/commit/71d779d19f9bfcb21084c8941654f04a629fd8b2))
 - unify changelog-generator with flexible tag pattern ([9ee9847](https://github.com/somaz94/helios-lb/commit/9ee9847e7b39d48297a88682f847a9d1f86fae2a))
 
+### Styles
+
+- fix gofmt alignment in webhook test ([70a67b0](https://github.com/somaz94/helios-lb/commit/70a67b05e0b7ea51a3e8a04018608b0483530fdb))
+
 ### Chores
 
+- **deps:** bump the go-minor group with 3 updates (#37) ([#37](https://github.com/somaz94/helios-lb/pull/37)) ([e242aea](https://github.com/somaz94/helios-lb/commit/e242aea4cc67d6a1f55f2221c6f0aa2ae1d8e9af))
+- add workflow Makefile targets (check-gh, branch, pr) ([07f47f6](https://github.com/somaz94/helios-lb/commit/07f47f626cd29e858a8c614aa73e4bd2f82dfb46))
+- add build-time version injection and OCI labels to Dockerfile ([b777a6a](https://github.com/somaz94/helios-lb/commit/b777a6a96dd219f681d0b5dfd9cda8902190b38c))
+- add version check and bump-version script ([3b43815](https://github.com/somaz94/helios-lb/commit/3b43815c09828123a3590a3bbac0304a9cd2b26f))
 - change license from MIT to Apache 2.0 ([59b598b](https://github.com/somaz94/helios-lb/commit/59b598b0074b0568baf9411ddbe497aae1e5938a))
 
 ### Contributors
 
-- GitHub Action
-- GitHub Actions
 - somaz
+
+<br/>
 
 ## [v0.2.6](https://github.com/somaz94/helios-lb/compare/v0.2.5...v0.2.6) (2026-03-12)
 
@@ -131,9 +160,9 @@ All notable changes to this project will be documented in this file.
 
 ### Contributors
 
-- GitHub Actions
-- dependabot[bot]
 - somaz
+
+<br/>
 
 ## [v0.2.5](https://github.com/somaz94/helios-lb/compare/v0.2.4...v0.2.5) (2025-02-03)
 
@@ -158,9 +187,9 @@ All notable changes to this project will be documented in this file.
 
 ### Contributors
 
-- GitHub Action
-- dependabot[bot]
 - somaz
+
+<br/>
 
 ## [v0.2.4](https://github.com/somaz94/helios-lb/compare/v0.1.4...v0.2.4) (2024-12-20)
 
@@ -183,7 +212,9 @@ All notable changes to this project will be documented in this file.
 
 - somaz
 
-## v0.1.4 (2024-12-18)
+<br/>
+
+## [v0.1.4](https://github.com/somaz94/helios-lb/releases/tag/v0.1.4) (2024-12-18)
 
 ### Features
 
@@ -199,4 +230,6 @@ All notable changes to this project will be documented in this file.
 ### Contributors
 
 - somaz
+
+<br/>
 
