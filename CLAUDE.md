@@ -14,7 +14,7 @@
 - Kubernetes operator built with controller-runtime (kubebuilder)
 - CRD: `HeliosConfig` (apiGroup: `balancer.helios.dev/v1`)
 - Bare-metal load balancer for Kubernetes (similar to MetalLB)
-- Features: IP allocation (CIDR/range/single), multiple HeliosConfig support, load balancing (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random via Algorithm interface), configurable health checks (TCP/HTTP), ARP-based L2 mode, Prometheus metrics
+- Features: IP allocation (CIDR/range/single, IPv4/IPv6), multiple HeliosConfig support, load balancing (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random via Algorithm interface), per-service weights, namespace isolation, per-config quota (maxAllocations), configurable health checks (TCP/HTTP), validating webhook (IP range/port/overlap), ARP-based L2 mode, Prometheus metrics
 
 <br/>
 

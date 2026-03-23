@@ -91,6 +91,14 @@ spec:
                   Supports single IP ("192.168.1.100"), range ("192.168.1.100-192.168.1.200"),
                   and CIDR notation ("192.168.1.0/24").
                 type: string
+              maxAllocations:
+                default: 0
+                description: |-
+                  MaxAllocations limits the maximum number of IP allocations for this config.
+                  0 means unlimited.
+                format: int32
+                minimum: 0
+                type: integer
               method:
                 default: RoundRobin
                 description: Method specifies the load balancing method
@@ -101,6 +109,13 @@ spec:
                 - IPHash
                 - Random
                 type: string
+              namespaceSelector:
+                description: |-
+                  NamespaceSelector restricts which namespaces this config manages.
+                  If empty, all namespaces are managed.
+                items:
+                  type: string
+                type: array
               ports:
                 default:
                 - port: 80
@@ -137,6 +152,29 @@ spec:
               service:
                 description: Service references the service to be load balanced
                 type: string
+              weights:
+                description: Weights configures per-service backend weights for WeightedRoundRobin
+                  method
+                items:
+                  description: WeightConfig defines the weight for a specific service
+                    backend
+                  properties:
+                    serviceName:
+                      description: ServiceName is the name of the Kubernetes service
+                      type: string
+                    weight:
+                      default: 1
+                      description: Weight is the relative weight for traffic distribution
+                        (higher = more traffic)
+                      format: int32
+                      maximum: 100
+                      minimum: 1
+                      type: integer
+                  required:
+                  - serviceName
+                  - weight
+                  type: object
+                type: array
             required:
             - ipRange
             type: object

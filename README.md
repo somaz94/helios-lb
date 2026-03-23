@@ -23,13 +23,19 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 ![Random](https://img.shields.io/badge/Random-green?logo=kubernetes&logoColor=white)
 ![ARP Layer2](https://img.shields.io/badge/ARP_Layer2-orange?logo=kubernetes&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus_Metrics-E6522C?logo=prometheus&logoColor=white)
+![IPv6](https://img.shields.io/badge/IPv6-blue?logo=kubernetes&logoColor=white)
 ![Bare Metal](https://img.shields.io/badge/Bare_Metal-326CE5?logo=kubernetes&logoColor=white)
 
 - Automatic IP address allocation for LoadBalancer services
 - Support for IP ranges in CIDR, range, or single IP format
+- IPv4 and IPv6 dual-stack support
 - Multiple load balancing methods (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random)
+- Per-service backend weights for WeightedRoundRobin
 - Multiple HeliosConfig resources per cluster with independent IP ranges
+- Namespace isolation via `namespaceSelector`
+- Per-config IP allocation quota via `maxAllocations`
 - Configurable health checks (TCP/HTTP, custom timeout and interval)
+- Validating webhook for IP range, port, and overlap validation
 - ARP-based layer 2 mode
 - Pluggable algorithm interface for custom load balancing strategies
 - Prometheus metrics support
@@ -169,12 +175,17 @@ metadata:
   name: heliosconfig-sample
 spec:
   # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
-  ipRange: "10.10.10.65" # 192.168.1.100-192.168.1.200 or 192.168.1.100
+  # Supports: single IP, range (192.168.1.100-200), CIDR (192.168.1.0/24), IPv6 (fd00::1, fd00::/120)
+  ipRange: "10.10.10.65"
   method: RoundRobin  # RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:              # Optional: default is 80
   - port: 80
   - port: 443
-  protocol: TCP      # Optional: default is TCP
+  protocol: TCP       # Optional: default is TCP
+  namespaceSelector:  # Optional: restrict to specific namespaces
+  - default
+  - production
+  maxAllocations: 10  # Optional: limit IP allocations (0 = unlimited)
 
 # Download the sample yaml file
 
@@ -265,10 +276,15 @@ You should see an external IP assigned from your configured IP range.
 
 ### HeliosConfig Options
 
-- `ipRange`: IP range for allocation (required) - supports single IP (`192.168.1.100`), range format (`192.168.1.100-192.168.1.200`), and CIDR format (`192.168.1.0/24`)
+- `ipRange`: IP range for allocation (required) - supports single IP (`192.168.1.100`), range format (`192.168.1.100-192.168.1.200`), CIDR format (`192.168.1.0/24`), and IPv6 (`fd00::1`, `fd00::1-fd00::ff`, `fd00::/120`)
 - `method`: Load balancing method (`RoundRobin`, `LeastConnection`, `WeightedRoundRobin`, `IPHash`, `Random`)
 - `ports`: Port configuration for the service (default: 80)
 - `protocol`: Protocol type (default: TCP)
+- `weights`: Per-service backend weights for WeightedRoundRobin (optional)
+  - `serviceName`: Name of the Kubernetes service
+  - `weight`: Relative weight (1-100, default: 1)
+- `namespaceSelector`: List of namespaces this config manages (optional, empty = all namespaces)
+- `maxAllocations`: Maximum number of IP allocations for this config (optional, 0 = unlimited)
 - `healthCheck`: Health check configuration (optional)
   - `enabled`: Enable/disable health checking (default: true)
   - `intervalSeconds`: Interval between health checks in seconds (default: 5, range: 1-300)

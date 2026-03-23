@@ -93,6 +93,12 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	// Build namespace allow-set from NamespaceSelector
+	nsAllowed := make(map[string]bool)
+	for _, ns := range heliosConfig.Spec.NamespaceSelector {
+		nsAllowed[ns] = true
+	}
+
 	// Filter LoadBalancer services managed by helios-lb
 	var lbServices []corev1.Service
 	for _, svc := range services.Items {
@@ -101,6 +107,10 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		// Skip services managed by other LB controllers
 		if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != "helios-lb" {
+			continue
+		}
+		// Skip services outside allowed namespaces (if selector is configured)
+		if len(nsAllowed) > 0 && !nsAllowed[svc.Namespace] {
 			continue
 		}
 		lbServices = append(lbServices, svc)
@@ -119,6 +129,14 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// - If loadBalancerIP is not set, the service is eligible for auto-allocation
 		if svc.Spec.LoadBalancerIP != "" && !network.IPInRange(svc.Spec.LoadBalancerIP, heliosConfig.Spec.IPRange) {
 			continue
+		}
+
+		// Check MaxAllocations quota
+		if heliosConfig.Spec.MaxAllocations > 0 &&
+			int32(len(heliosConfig.Status.AllocatedIPs)) >= heliosConfig.Spec.MaxAllocations {
+			log.Info("max allocations reached", "max", heliosConfig.Spec.MaxAllocations,
+				"current", len(heliosConfig.Status.AllocatedIPs))
+			break
 		}
 
 		// Allocate IP

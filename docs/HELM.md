@@ -1,7 +1,7 @@
 # Helios Load Balancer Helm Chart
 
 ## Introduction
-This Helm chart installs Helios Load Balancer Controller on your Kubernetes cluster. The controller provides load balancing functionality with methods including RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, and Random.
+This Helm chart installs Helios Load Balancer Controller on your Kubernetes cluster. The controller provides load balancing functionality with IPv4/IPv6 support, methods including RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, and Random, namespace isolation, per-config quota, and validating webhooks.
 
 ## Prerequisites
 - Kubernetes 1.16+

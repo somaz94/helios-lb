@@ -171,6 +171,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "HeliosConfig")
 		os.Exit(1)
 	}
+	if err = balancerv1.SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "HeliosConfig")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	// Set up health and readiness checks

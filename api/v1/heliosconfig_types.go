@@ -51,9 +51,38 @@ type HeliosConfigSpec struct {
 	// +kubebuilder:default:=RoundRobin
 	Method string `json:"method,omitempty"`
 
+	// Weights configures per-service backend weights for WeightedRoundRobin method
+	// +optional
+	Weights []WeightConfig `json:"weights,omitempty"`
+
 	// HealthCheck configures backend health checking
 	// +optional
 	HealthCheck *HealthCheckConfig `json:"healthCheck,omitempty"`
+
+	// NamespaceSelector restricts which namespaces this config manages.
+	// If empty, all namespaces are managed.
+	// +optional
+	NamespaceSelector []string `json:"namespaceSelector,omitempty"`
+
+	// MaxAllocations limits the maximum number of IP allocations for this config.
+	// 0 means unlimited.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default:=0
+	// +optional
+	MaxAllocations int32 `json:"maxAllocations,omitempty"`
+}
+
+// WeightConfig defines the weight for a specific service backend
+type WeightConfig struct {
+	// ServiceName is the name of the Kubernetes service
+	// +kubebuilder:validation:Required
+	ServiceName string `json:"serviceName"`
+
+	// Weight is the relative weight for traffic distribution (higher = more traffic)
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default:=1
+	Weight int32 `json:"weight"`
 }
 
 // HealthCheckConfig defines the health check parameters for backends

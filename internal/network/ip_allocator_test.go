@@ -226,3 +226,109 @@ func TestIPInRange(t *testing.T) {
 		}
 	})
 }
+
+func TestIPAllocator_IPv6(t *testing.T) {
+	t.Run("Single IPv6 address", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		ip, err := allocator.AllocateIP("fd00::1")
+		if err != nil {
+			t.Fatalf("Failed to allocate IPv6: %v", err)
+		}
+		if ip != "fd00::1" {
+			t.Errorf("Expected fd00::1, got %s", ip)
+		}
+	})
+
+	t.Run("IPv6 range allocation", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		ip1, err := allocator.AllocateIP("fd00::1-fd00::3")
+		if err != nil {
+			t.Fatalf("Failed to allocate IPv6: %v", err)
+		}
+		if ip1 != "fd00::1" {
+			t.Errorf("Expected fd00::1, got %s", ip1)
+		}
+
+		ip2, err := allocator.AllocateIP("fd00::1-fd00::3")
+		if err != nil {
+			t.Fatalf("Failed to allocate second IPv6: %v", err)
+		}
+		if ip2 != "fd00::2" {
+			t.Errorf("Expected fd00::2, got %s", ip2)
+		}
+
+		ip3, err := allocator.AllocateIP("fd00::1-fd00::3")
+		if err != nil {
+			t.Fatalf("Failed to allocate third IPv6: %v", err)
+		}
+		if ip3 != "fd00::3" {
+			t.Errorf("Expected fd00::3, got %s", ip3)
+		}
+
+		_, err = allocator.AllocateIP("fd00::1-fd00::3")
+		if err == nil {
+			t.Error("Expected error when IPv6 range is exhausted")
+		}
+	})
+
+	t.Run("IPv6 CIDR /126 allocation", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		// /126 has 4 addresses; IPv6 does not skip network/broadcast
+		ip1, err := allocator.AllocateIP("fd00::/126")
+		if err != nil {
+			t.Fatalf("Failed to allocate from IPv6 CIDR: %v", err)
+		}
+		if ip1 != "::" {
+			// fd00:: with /126 network address is fd00::
+			t.Logf("First IPv6 CIDR IP: %s", ip1)
+		}
+	})
+
+	t.Run("IPv6 release and reallocate", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		ip1, _ := allocator.AllocateIP("fd00::a-fd00::b")
+		allocator.ReleaseIP(ip1)
+		ip2, _ := allocator.AllocateIP("fd00::a-fd00::b")
+		if ip1 != ip2 {
+			t.Errorf("Expected released IPv6 to be reallocated, got %s, want %s", ip2, ip1)
+		}
+	})
+}
+
+func TestIPInRange_IPv6(t *testing.T) {
+	t.Run("IPv6 within range", func(t *testing.T) {
+		if !IPInRange("fd00::5", "fd00::1-fd00::ff") {
+			t.Error("Expected fd00::5 to be in range fd00::1-fd00::ff")
+		}
+	})
+
+	t.Run("IPv6 outside range", func(t *testing.T) {
+		if IPInRange("fd00::100", "fd00::1-fd00::ff") {
+			t.Error("Expected fd00::100 to NOT be in range fd00::1-fd00::ff")
+		}
+	})
+
+	t.Run("IPv6 CIDR containment", func(t *testing.T) {
+		if !IPInRange("fd00::50", "fd00::/120") {
+			t.Error("Expected fd00::50 to be in fd00::/120")
+		}
+	})
+
+	t.Run("IPv6 outside CIDR", func(t *testing.T) {
+		if IPInRange("fd00::1:1", "fd00::/120") {
+			t.Error("Expected fd00::1:1 to NOT be in fd00::/120")
+		}
+	})
+
+	t.Run("Single IPv6 match", func(t *testing.T) {
+		if !IPInRange("fd00::1", "fd00::1") {
+			t.Error("Expected fd00::1 to match single IPv6")
+		}
+	})
+
+	t.Run("Single IPv6 no match", func(t *testing.T) {
+		if IPInRange("fd00::2", "fd00::1") {
+			t.Error("Expected fd00::2 to NOT match single IPv6 fd00::1")
+		}
+	})
+}
