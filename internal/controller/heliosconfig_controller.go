@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +47,7 @@ type HeliosConfigReconciler struct {
 	Balancer   *loadbalancer.LoadBalancer
 	Metrics    *metrics.MetricsRecorder
 	IPMgr      *IPManager
+	Recorder   record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=balancer.helios.dev,resources=heliosconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -53,6 +55,7 @@ type HeliosConfigReconciler struct {
 // +kubebuilder:rbac:groups=balancer.helios.dev,resources=heliosconfigs/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 const (
 	heliosConfigFinalizer = "balancer.helios.dev/finalizer"
@@ -125,6 +128,8 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			svcLogger.Info("max allocations reached, skipping remaining services",
 				LogKeyMaxAlloc, heliosConfig.Spec.MaxAllocations,
 				LogKeyCurrentAlloc, len(heliosConfig.Status.AllocatedIPs))
+			r.Recorder.Eventf(&heliosConfig, corev1.EventTypeWarning, "QuotaExceeded",
+				"Max allocations reached (%d/%d)", len(heliosConfig.Status.AllocatedIPs), heliosConfig.Spec.MaxAllocations)
 			break
 		}
 
@@ -132,6 +137,8 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		ip, err := r.IPMgr.AllocateAndAssign(ctx, svcLogger, &heliosConfig, svc)
 		if err != nil {
 			svcLogger.Error(err, "failed to allocate and assign IP")
+			r.Recorder.Eventf(&heliosConfig, corev1.EventTypeWarning, "AllocationFailed",
+				"Failed to allocate IP for service %s/%s: %v", svc.Namespace, svc.Name, err)
 			heliosConfig.Status.Phase = balancerv1.StateFailed
 			heliosConfig.Status.State = balancerv1.StateFailed
 			heliosConfig.Status.Message = err.Error()
@@ -141,6 +148,9 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.Metrics.RecordRequeueReason(heliosConfig.Name, heliosConfig.Namespace, "ip_allocation_error")
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
+
+		r.Recorder.Eventf(&heliosConfig, corev1.EventTypeNormal, "IPAllocated",
+			"Allocated IP %s to service %s/%s", ip, svc.Namespace, svc.Name)
 
 		// Update HeliosConfig status
 		if heliosConfig.Status.AllocatedIPs == nil {
@@ -168,14 +178,22 @@ func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfi
 	)
 
 	if controllerutil.ContainsFinalizer(heliosConfig, heliosConfigFinalizer) {
-		logger.Info("cleaning up allocated IPs", LogKeyAllocatedIPs, len(heliosConfig.Status.AllocatedIPs))
+		allocCount := len(heliosConfig.Status.AllocatedIPs)
+		logger.Info("cleaning up allocated IPs", LogKeyAllocatedIPs, allocCount)
+		r.Recorder.Eventf(heliosConfig, corev1.EventTypeNormal, "CleanupStarted",
+			"Releasing %d allocated IPs", allocCount)
+
 		r.IPMgr.ReleaseAll(ctx, logger, heliosConfig)
 
 		controllerutil.RemoveFinalizer(heliosConfig, heliosConfigFinalizer)
 		if err := r.Update(ctx, heliosConfig); err != nil {
 			logger.Error(err, "failed to remove finalizer")
+			r.Recorder.Eventf(heliosConfig, corev1.EventTypeWarning, "CleanupFailed",
+				"Failed to remove finalizer: %v", err)
 			return ctrl.Result{}, err
 		}
+		r.Recorder.Event(heliosConfig, corev1.EventTypeNormal, "CleanupComplete",
+			"All allocated IPs released and finalizer removed")
 		logger.Info("finalizer removed, deletion complete")
 	}
 

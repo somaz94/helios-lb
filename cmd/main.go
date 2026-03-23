@@ -178,6 +178,7 @@ func main() {
 		Balancer:   lb,
 		Metrics:    metricsRecorder,
 		IPMgr:      ipMgr,
+		Recorder:   mgr.GetEventRecorderFor("helios-lb-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HeliosConfig")
 		os.Exit(1)
