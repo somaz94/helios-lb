@@ -3,6 +3,7 @@ kind: HeliosConfig
 metadata:
   name: heliosconfig-sample
 spec:
-  # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
-  ipRange: "10.10.10.65" # 192.168.1.100-192.168.1.200 or 192.168.1.100
-  method: RoundRobin  # Optional: Load balancing method (defaults to RoundRobin)
+  # IP range for virtual IP allocation. default port: 80 & default protocol: tcp
+  # Formats: single IP, range (192.168.1.100-192.168.1.200), or CIDR (192.168.1.0/24)
+  ipRange: "10.10.10.65"
+  method: RoundRobin  # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random

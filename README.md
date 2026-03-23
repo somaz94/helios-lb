@@ -18,16 +18,20 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 ![CIDR Range](https://img.shields.io/badge/CIDR_Range-blue?logo=kubernetes&logoColor=white)
 ![Round Robin](https://img.shields.io/badge/Round_Robin-green?logo=kubernetes&logoColor=white)
 ![Least Connection](https://img.shields.io/badge/Least_Connection-green?logo=kubernetes&logoColor=white)
+![Weighted Round Robin](https://img.shields.io/badge/Weighted_Round_Robin-green?logo=kubernetes&logoColor=white)
+![IP Hash](https://img.shields.io/badge/IP_Hash-green?logo=kubernetes&logoColor=white)
+![Random](https://img.shields.io/badge/Random-green?logo=kubernetes&logoColor=white)
 ![ARP Layer2](https://img.shields.io/badge/ARP_Layer2-orange?logo=kubernetes&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus_Metrics-E6522C?logo=prometheus&logoColor=white)
 ![Bare Metal](https://img.shields.io/badge/Bare_Metal-326CE5?logo=kubernetes&logoColor=white)
 
 - Automatic IP address allocation for LoadBalancer services
-- Support for IP ranges in CIDR or range format
-- Multiple load balancing methods (Round Robin, Least Connection)
+- Support for IP ranges in CIDR, range, or single IP format
+- Multiple load balancing methods (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random)
+- Multiple HeliosConfig resources per cluster with independent IP ranges
+- Configurable health checks (TCP/HTTP, custom timeout and interval)
 - ARP-based layer 2 mode
-- Configurable network interface
-- Customizable ARP announcement intervals
+- Pluggable algorithm interface for custom load balancing strategies
 - Prometheus metrics support
 - Status monitoring and reporting
 
@@ -166,7 +170,7 @@ metadata:
 spec:
   # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
   ipRange: "10.10.10.65" # 192.168.1.100-192.168.1.200 or 192.168.1.100
-  method: RoundRobin  # Currently only RoundRobin is supported
+  method: RoundRobin  # RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:              # Optional: default is 80
   - port: 80
   - port: 443
@@ -261,12 +265,16 @@ You should see an external IP assigned from your configured IP range.
 
 ### HeliosConfig Options
 
-- `ipRange`: IP range for allocation (required) - supports both range format (192.168.1.100-192.168.1.200) and CIDR format (192.168.1.0/24)
-- `method`: Load balancing method (RoundRobin, LeastConnection)
+- `ipRange`: IP range for allocation (required) - supports single IP (`192.168.1.100`), range format (`192.168.1.100-192.168.1.200`), and CIDR format (`192.168.1.0/24`)
+- `method`: Load balancing method (`RoundRobin`, `LeastConnection`, `WeightedRoundRobin`, `IPHash`, `Random`)
 - `ports`: Port configuration for the service (default: 80)
 - `protocol`: Protocol type (default: TCP)
-- `healthCheckInterval`: Health check interval in seconds (default: 5)
-- `metricsEnabled`: Enable or disable metrics collection (default: true)
+- `healthCheck`: Health check configuration (optional)
+  - `enabled`: Enable/disable health checking (default: true)
+  - `intervalSeconds`: Interval between health checks in seconds (default: 5, range: 1-300)
+  - `timeoutMs`: Health check timeout in milliseconds (default: 1000, range: 1-30000)
+  - `protocol`: Health check protocol - `TCP` or `HTTP` (default: TCP)
+  - `httpPath`: HTTP path for HTTP health checks (e.g., `/healthz`)
 
 <br/>
 
@@ -318,7 +326,7 @@ Helios-LB supports the following load balancing algorithms:
    spec:
      method: RoundRobin
    ```
-   - Distributes requests sequentially across all healthy backends
+   - Distributes requests sequentially across all backends
    - Ensures even distribution of traffic
 
 2. **Least Connection**
@@ -329,10 +337,29 @@ Helios-LB supports the following load balancing algorithms:
    - Directs traffic to backend with fewest active connections
    - Ideal for long-lived connections
 
-**Planned:**
-- Weighted Round Robin
-- IP Hash
-- Random Selection
+3. **Weighted Round Robin**
+   ```yaml
+   spec:
+     method: WeightedRoundRobin
+   ```
+   - Distributes traffic based on backend weights
+   - Higher-weight backends receive more traffic
+
+4. **IP Hash**
+   ```yaml
+   spec:
+     method: IPHash
+   ```
+   - Routes traffic based on client IP hash
+   - Provides session persistence (same client → same backend)
+
+5. **Random**
+   ```yaml
+   spec:
+     method: Random
+   ```
+   - Randomly selects a healthy backend
+   - Simple and effective for homogeneous backends
 
 <br/>
 
