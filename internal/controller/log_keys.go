@@ -16,4 +16,6 @@ const (
 	LogKeyReconcileTime = "reconcileTimeMs"
 	LogKeyConflictIP    = "conflictIP"
 	LogKeyConflictOwner = "conflictOwner"
+	LogKeyIPv6          = "ipv6"
+	LogKeyIPv6Range     = "ipv6Range"
 )

@@ -25,11 +25,18 @@ import (
 
 // HeliosConfigSpec defines the desired state of HeliosConfig.
 type HeliosConfigSpec struct {
-	// IPRange defines the IP address range for load balancer.
+	// IPRange defines the IPv4 address range for load balancer.
 	// Supports single IP ("192.168.1.100"), range ("192.168.1.100-192.168.1.200"),
 	// and CIDR notation ("192.168.1.0/24").
 	// +kubebuilder:validation:Required
 	IPRange string `json:"ipRange"`
+
+	// IPv6Range defines the IPv6 address range for dual-stack load balancer.
+	// Supports single IP ("fd00::1"), range ("fd00::1-fd00::ff"),
+	// and CIDR notation ("fd00::/120").
+	// When set alongside IPRange, enables dual-stack allocation.
+	// +optional
+	IPv6Range string `json:"ipv6Range,omitempty"`
 
 	// Service references the service to be load balanced
 	// +optional
@@ -128,8 +135,11 @@ type PortConfig struct {
 
 // HeliosConfigStatus defines the observed state of HeliosConfig.
 type HeliosConfigStatus struct {
-	// AllocatedIPs is a map of service names to their allocated IPs
+	// AllocatedIPs is a map of service names to their allocated IPv4 addresses
 	AllocatedIPs map[string]string `json:"allocatedIPs,omitempty"`
+
+	// AllocatedIPv6s is a map of service names to their allocated IPv6 addresses (dual-stack)
+	AllocatedIPv6s map[string]string `json:"allocatedIPv6s,omitempty"`
 
 	// State represents the current state of the load balancer
 	// +kubebuilder:validation:Enum=Pending;Active;Failed
