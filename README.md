@@ -130,7 +130,7 @@ helm install helios-lb helios-lb/helios-lb
 
 # Or install with custom values
 helm install helios-lb helios-lb/helios-lb \
-  --set image.tag=v0.3.0 \
+  --set image.tag=v0.4.0 \
   --namespace helios-lb-system --create-namespace
 ```
 
@@ -157,7 +157,7 @@ cd helios-lb
 make install
 
 # Deploy the controller
-make deploy IMG=somaz940/helios-lb:v0.3.0
+make deploy IMG=somaz940/helios-lb:v0.4.0
 ```
 
 <br/>
@@ -177,6 +177,7 @@ spec:
   # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
   # Supports: single IP, range (192.168.1.100-200), CIDR (192.168.1.0/24), IPv6 (fd00::1, fd00::/120)
   ipRange: "10.10.10.65"
+  ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
   method: RoundRobin  # RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:              # Optional: default is 80
   - port: 80
@@ -194,6 +195,9 @@ curl -o heliosconfig.yaml https://raw.githubusercontent.com/somaz94/helios-lb/ma
 
 # port: 80,443 & protocol: tcp
 curl -o heliosconfig-port.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/balancer_v1_heliosconfig_port.yaml
+
+# dual-stack (IPv4 + IPv6)
+curl -o heliosconfig-dualstack.yaml https://raw.githubusercontent.com/somaz94/helios-lb/main/release/examples/balancer_v1_heliosconfig_dualstack.yaml
 ```
 
 <br/>
@@ -277,6 +281,7 @@ You should see an external IP assigned from your configured IP range.
 ### HeliosConfig Options
 
 - `ipRange`: IP range for allocation (required) - supports single IP (`192.168.1.100`), range format (`192.168.1.100-192.168.1.200`), CIDR format (`192.168.1.0/24`), and IPv6 (`fd00::1`, `fd00::1-fd00::ff`, `fd00::/120`)
+- `ipv6Range`: IPv6 address range for dual-stack allocation (optional) - when set alongside `ipRange`, enables dual-stack mode where both IPv4 and IPv6 addresses are allocated to each service
 - `method`: Load balancing method (`RoundRobin`, `LeastConnection`, `WeightedRoundRobin`, `IPHash`, `Random`)
 - `ports`: Port configuration for the service (default: 80)
 - `protocol`: Protocol type (default: TCP)
@@ -291,6 +296,39 @@ You should see an external IP assigned from your configured IP range.
   - `timeoutMs`: Health check timeout in milliseconds (default: 1000, range: 1-30000)
   - `protocol`: Health check protocol - `TCP` or `HTTP` (default: TCP)
   - `httpPath`: HTTP path for HTTP health checks (e.g., `/healthz`)
+
+### Status Fields
+
+- `allocatedIPs`: Map of service names to their allocated IPv4 addresses
+- `allocatedIPv6s`: Map of service names to their allocated IPv6 addresses (dual-stack only)
+- `phase`: Current phase of the HeliosConfig (`Pending`, `Active`, `Failed`)
+- `state`: Current state (same as phase, for backward compatibility)
+- `message`: Human-readable status message
+- `conditions`: Standard Kubernetes conditions:
+  - `Ready`: Whether the HeliosConfig is successfully allocating IPs
+  - `Degraded`: Whether there are issues (e.g., IP conflicts)
+
+### IP Conflict Detection
+
+When multiple HeliosConfig resources exist in a cluster, Helios-LB automatically detects IP range overlaps:
+
+- If an IP already allocated by another HeliosConfig falls within the current config's range, a conflict is reported
+- Conflicting configs are marked with `Degraded=True` condition and `IPConflict` reason
+- A Kubernetes warning event `IPConflict` is emitted
+- The controller requeues with a 30-second delay to allow resolution
+
+### Kubernetes Events
+
+The controller emits the following events on HeliosConfig resources:
+
+| Event | Type | Description |
+|-------|------|-------------|
+| `IPAllocated` | Normal | IP successfully allocated to a service |
+| `IPConflict` | Warning | IP range overlaps with another HeliosConfig |
+| `QuotaExceeded` | Warning | Max allocations limit reached |
+| `AllocationFailed` | Warning | Failed to allocate IP for a service |
+| `CleanupStarted` | Normal | Releasing allocated IPs during deletion |
+| `CleanupComplete` | Normal | All IPs released and finalizer removed |
 
 <br/>
 

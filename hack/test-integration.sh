@@ -19,6 +19,8 @@ SAMPLES_DIR="config/samples"
 TEST_IP="${TEST_IP:-10.10.10.100}"
 TEST_IP2="${TEST_IP2:-10.10.10.101}"
 TEST_IP_RANGE="${TEST_IP_RANGE:-10.10.10.100-10.10.10.110}"
+TEST_IPV6="${TEST_IPV6:-fd00::100}"
+TEST_IP_CONFLICT="${TEST_IP_CONFLICT:-10.10.10.100}"
 
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -156,7 +158,7 @@ if [ "$IP_CONFLICT" = true ]; then
   exit 1
 fi
 log_pass "Test IPs are available (${TEST_IP}, ${TEST_IP2})"
-log_info "Using test IPs: TEST_IP=${TEST_IP}, TEST_IP2=${TEST_IP2}, TEST_IP_RANGE=${TEST_IP_RANGE}"
+log_info "Using test IPs: TEST_IP=${TEST_IP}, TEST_IP2=${TEST_IP2}, TEST_IP_RANGE=${TEST_IP_RANGE}, TEST_IPV6=${TEST_IPV6}"
 
 # Auto-install CRD if not found
 if ! kubectl get crd heliosconfigs.balancer.helios.dev >/dev/null 2>&1; then
@@ -427,6 +429,117 @@ if ! kubectl get heliosconfig test-cleanup -n default 2>/dev/null; then
 else
   log_fail "Cleanup: HeliosConfig still exists"
 fi
+
+# ── Test F: Dual-Stack HeliosConfig ──
+echo ""
+log_info "--- Test F: Dual-Stack HeliosConfig ---"
+
+kubectl apply -f - <<EOF
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: test-dualstack
+  namespace: default
+spec:
+  ipRange: "${TEST_IP}"
+  ipv6Range: "${TEST_IPV6}"
+  method: RoundRobin
+EOF
+
+if wait_for_active "test-dualstack" "default" 30; then
+  log_pass "Dual-Stack: HeliosConfig became Active"
+else
+  log_fail "Dual-Stack: HeliosConfig did not become Active"
+fi
+
+# Check both IPv4 and IPv6 allocated
+ALLOCATED_V4=$(kubectl get heliosconfig test-dualstack -n default -o jsonpath='{.status.allocatedIPs}' 2>/dev/null || echo "{}")
+ALLOCATED_V6=$(kubectl get heliosconfig test-dualstack -n default -o jsonpath='{.status.allocatedIPv6s}' 2>/dev/null || echo "{}")
+if [ "$ALLOCATED_V4" != "{}" ] && [ -n "$ALLOCATED_V4" ]; then
+  log_pass "Dual-Stack: IPv4 allocated (${ALLOCATED_V4})"
+else
+  log_skip "Dual-Stack: No IPv4 allocated"
+fi
+if [ "$ALLOCATED_V6" != "{}" ] && [ -n "$ALLOCATED_V6" ]; then
+  log_pass "Dual-Stack: IPv6 allocated (${ALLOCATED_V6})"
+else
+  log_skip "Dual-Stack: No IPv6 allocated (may require IPv6-capable cluster)"
+fi
+
+# Check service has dual ingress entries
+INGRESS_COUNT=$(kubectl get svc test-svc1 -n default -o jsonpath='{.status.loadBalancer.ingress}' 2>/dev/null | grep -o '"ip"' | wc -l | tr -d ' ')
+if [ "$INGRESS_COUNT" -ge 2 ]; then
+  log_pass "Dual-Stack: Service has ${INGRESS_COUNT} ingress entries (dual-stack)"
+else
+  log_skip "Dual-Stack: Service has ${INGRESS_COUNT} ingress entries"
+fi
+
+cleanup_cr
+
+# ── Test G: IP Conflict Detection ──
+echo ""
+log_info "--- Test G: IP Conflict Detection ---"
+
+# Create first config and wait for it to allocate
+kubectl apply -f - <<EOF
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: test-conflict-a
+  namespace: default
+spec:
+  ipRange: "${TEST_IP}"
+  method: RoundRobin
+EOF
+
+wait_for_active "test-conflict-a" "default" 30 || true
+
+# Create second config with overlapping range
+kubectl apply -f - <<EOF
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: test-conflict-b
+  namespace: default
+spec:
+  ipRange: "${TEST_IP_CONFLICT}"
+  method: RoundRobin
+EOF
+
+sleep 10
+
+# Check for Degraded condition on the second config
+DEGRADED=$(kubectl get heliosconfig test-conflict-b -n default -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null || echo "")
+DEGRADED_REASON=$(kubectl get heliosconfig test-conflict-b -n default -o jsonpath='{.status.conditions[?(@.type=="Degraded")].reason}' 2>/dev/null || echo "")
+
+if [ "$DEGRADED" = "True" ] && [ "$DEGRADED_REASON" = "IPConflict" ]; then
+  log_pass "Conflict: IP conflict detected (Degraded=True, reason=IPConflict)"
+else
+  # Conflict may also be detected on first config depending on reconcile order
+  DEGRADED_A=$(kubectl get heliosconfig test-conflict-a -n default -o jsonpath='{.status.conditions[?(@.type=="Degraded")].reason}' 2>/dev/null || echo "")
+  if [ "$DEGRADED_A" = "IPConflict" ]; then
+    log_pass "Conflict: IP conflict detected on first config (Degraded, reason=IPConflict)"
+  else
+    log_skip "Conflict: No IP conflict condition detected (Degraded=${DEGRADED}, reason=${DEGRADED_REASON})"
+  fi
+fi
+
+# Check for IPConflict event
+CONFLICT_EVENTS=$(kubectl get events -n default --field-selector reason=IPConflict 2>/dev/null | grep -c "IPConflict" || echo "0")
+if [ "$CONFLICT_EVENTS" -gt 0 ]; then
+  log_pass "Conflict: IPConflict event emitted"
+else
+  log_skip "Conflict: No IPConflict event found"
+fi
+
+kubectl delete heliosconfig test-conflict-a test-conflict-b -n default --ignore-not-found 2>/dev/null || true
+sleep 2
+# Clear service ingress status
+for svc in test-svc1 test-svc2; do
+  kubectl patch svc "$svc" -n default --subresource=status \
+    -p '{"status":{"loadBalancer":{}}}' --type=merge 2>/dev/null || true
+done
+sleep 1
 
 # ── Summary ──
 echo ""

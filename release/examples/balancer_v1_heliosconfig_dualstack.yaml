@@ -1,0 +1,13 @@
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: heliosconfig-dualstack
+spec:
+  # IPv4 range for allocation
+  ipRange: "10.10.10.65"
+  # IPv6 range for dual-stack allocation
+  # When both ipRange and ipv6Range are set, services receive both IPv4 and IPv6 addresses
+  ipv6Range: "fd00::1"
+  method: RoundRobin  # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
+  # namespaceSelector: ["default"]  # Optional: restrict to specific namespaces
+  # maxAllocations: 10              # Optional: limit IP allocations (0 = unlimited)

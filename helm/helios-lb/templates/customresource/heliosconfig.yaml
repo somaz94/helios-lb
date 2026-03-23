@@ -5,6 +5,9 @@ metadata:
   name: {{ .Values.customresource.basic.name | default "heliosconfig-basic" }}
 spec:
   ipRange: {{ .Values.customresource.basic.ipRange }}
+  {{- if .Values.customresource.basic.ipv6Range }}
+  ipv6Range: {{ .Values.customresource.basic.ipv6Range }}
+  {{- end }}
   {{- if .Values.customresource.basic.method }}
   method: {{ .Values.customresource.basic.method }}
   {{- end }}
@@ -32,6 +35,9 @@ metadata:
   name: {{ .Values.customresource.port.name | default "heliosconfig-port" }}
 spec:
   ipRange: {{ .Values.customresource.port.ipRange }}
+  {{- if .Values.customresource.port.ipv6Range }}
+  ipv6Range: {{ .Values.customresource.port.ipv6Range }}
+  {{- end }}
   {{- if .Values.customresource.port.method }}
   method: {{ .Values.customresource.port.method }}
   {{- end }}
@@ -53,6 +59,9 @@ metadata:
   name: {{ .Values.customresource.weight.name | default "heliosconfig-weight" }}
 spec:
   ipRange: {{ .Values.customresource.weight.ipRange }}
+  {{- if .Values.customresource.weight.ipv6Range }}
+  ipv6Range: {{ .Values.customresource.weight.ipv6Range }}
+  {{- end }}
   method: WeightedRoundRobin
   {{- if .Values.customresource.weight.ports }}
   ports:

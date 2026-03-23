@@ -17,6 +17,7 @@ NAMESPACE="helios-lb-system"
 
 # Configurable test IP via environment variable
 TEST_IP="${TEST_IP:-10.10.10.100}"
+TEST_IPV6="${TEST_IPV6:-fd00::100}"
 
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -68,7 +69,7 @@ echo ""
 log_info "========================================="
 log_info "Helios LB Helm Test"
 log_info "========================================="
-log_info "Using test IP: TEST_IP=${TEST_IP}"
+log_info "Using test IPs: TEST_IP=${TEST_IP}, TEST_IPV6=${TEST_IPV6}"
 log_info "Find free IPs: make find-free-ip  |  Override: TEST_IP=<free-ip> make test-helm"
 echo ""
 
@@ -288,6 +289,37 @@ if ! kubectl get heliosconfig test-cleanup -n default 2>/dev/null; then
 else
   log_fail "Cleanup: CR still exists"
 fi
+
+# ── Test: Dual-Stack HeliosConfig ──
+echo ""
+log_info "--- [Test] Dual-Stack HeliosConfig ---"
+
+kubectl apply -f - <<EOF
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: test-dualstack
+  namespace: default
+spec:
+  ipRange: "${TEST_IP}"
+  ipv6Range: "${TEST_IPV6}"
+  method: RoundRobin
+EOF
+
+if wait_for_active "test-dualstack" "default" 30; then
+  log_pass "Dual-Stack: HeliosConfig Active"
+else
+  log_fail "Dual-Stack: HeliosConfig not Active"
+fi
+
+ALLOCATED_V6=$(kubectl get heliosconfig test-dualstack -n default -o jsonpath='{.status.allocatedIPv6s}' 2>/dev/null || echo "{}")
+if [ "$ALLOCATED_V6" != "{}" ] && [ -n "$ALLOCATED_V6" ]; then
+  log_pass "Dual-Stack: IPv6 allocated"
+else
+  log_skip "Dual-Stack: No IPv6 allocated (may require IPv6-capable cluster)"
+fi
+
+cleanup_cr
 
 # ── Helm Upgrade Test ──
 echo ""

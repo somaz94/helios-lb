@@ -1,0 +1,14 @@
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: heliosconfig-dualstack
+spec:
+  # IMPORTANT: Replace with unused IPs in your network (use 'make find-free-ip')
+  # IPv4 range for allocation
+  ipRange: "<YOUR_FREE_IP>"  # e.g. 192.168.1.100, 192.168.1.100-192.168.1.200, or 192.168.1.0/24
+  # IPv6 range for dual-stack allocation
+  # When both ipRange and ipv6Range are set, services receive both IPv4 and IPv6 addresses
+  ipv6Range: "<YOUR_FREE_IPv6>"  # e.g. fd00::1, fd00::1-fd00::ff, or fd00::/120
+  method: RoundRobin  # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
+  # namespaceSelector: ["default"]  # Optional: restrict to specific namespaces
+  # maxAllocations: 10              # Optional: limit IP allocations (0 = unlimited)

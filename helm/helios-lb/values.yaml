@@ -10,7 +10,7 @@ namespace: helios-lb-system
 image:
   repository: somaz940/helios-lb
   pullPolicy: IfNotPresent
-  tag: "v0.3.0"
+  tag: "v0.4.0"
 
 imagePullSecrets: []
 
@@ -105,6 +105,7 @@ customresource:
     enabled: false
     name: "heliosconfig-basic"
     ipRange: "10.10.10.65"
+    # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     method: "RoundRobin"
     # namespaceSelector: []  # Optional: restrict to specific namespaces
     # maxAllocations: 0      # Optional: limit IP allocations (0 = unlimited)
@@ -113,6 +114,7 @@ customresource:
     enabled: false
     name: "heliosconfig-port"
     ipRange: "10.10.10.65"
+    # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     method: "RoundRobin"
     ports:
       - port: 80
@@ -124,6 +126,7 @@ customresource:
     enabled: false
     name: "heliosconfig-weight"
     ipRange: "10.10.10.65"
+    # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     ports:
       - port: 80
       - port: 443
