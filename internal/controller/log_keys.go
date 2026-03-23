@@ -14,4 +14,6 @@ const (
 	LogKeyAllocatedIPs  = "allocatedIPs"
 	LogKeyServiceCount  = "serviceCount"
 	LogKeyReconcileTime = "reconcileTimeMs"
+	LogKeyConflictIP    = "conflictIP"
+	LogKeyConflictOwner = "conflictOwner"
 )

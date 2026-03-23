@@ -15,6 +15,11 @@ func (nm *NetworkManager) AllocateIP(ipRange string) (string, error) {
 	return nm.ipAllocator.AllocateIP(ipRange)
 }
 
+// MarkUsed marks an IP as used to prevent conflict during allocation.
+func (nm *NetworkManager) MarkUsed(ip string) {
+	nm.ipAllocator.MarkUsed(ip)
+}
+
 // ReleaseIP releases an IP
 func (nm *NetworkManager) ReleaseIP(ip string) {
 	nm.ipAllocator.ReleaseIP(ip)

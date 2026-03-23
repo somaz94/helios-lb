@@ -178,6 +178,14 @@ func IPInRange(ip string, ipRange string) bool {
 	return bytes.Compare(normalized, start) >= 0 && bytes.Compare(normalized, end) <= 0
 }
 
+// MarkUsed marks an IP as used without allocating it.
+// This is used to prevent conflicts with IPs allocated by other HeliosConfigs.
+func (a *IPAllocator) MarkUsed(ip string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.used[ip] = true
+}
+
 // ReleaseIP releases an allocated IP
 func (a *IPAllocator) ReleaseIP(ip string) {
 	a.mu.Lock()

@@ -59,7 +59,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		resourceName := fmt.Sprintf("test-helios-%d", testID)
 		serviceName := fmt.Sprintf("test-service-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
-		specificIP := "192.168.1.100"
+		specificIP := fmt.Sprintf("10.%d.1.100", testID)
 
 		By("Creating a new HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -131,7 +131,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: "192.168.1.100",
+				LoadBalancerIP: fmt.Sprintf("10.%d.1.100", testID),
 				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
@@ -163,7 +163,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: balancerv1.HeliosConfigSpec{
-				IPRange: "192.168.1.100-192.168.1.200",
+				IPRange: fmt.Sprintf("10.%d.1.100-10.%d.1.200", testID, testID),
 				Method:  "RoundRobin",
 			},
 		}
@@ -181,7 +181,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		resourceName := fmt.Sprintf("test-helios-%d", testID)
 		serviceName := fmt.Sprintf("test-service-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
-		specificIP := "192.168.1.100"
+		specificIP := fmt.Sprintf("10.%d.1.100", testID)
 
 		By("Creating a new HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -228,8 +228,8 @@ var _ = Describe("HeliosConfig Controller", func() {
 		resourceName := fmt.Sprintf("test-helios-%d", testID)
 		serviceName := fmt.Sprintf("test-service-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
-		heliosIP := "192.168.1.100"
-		differentIP := "192.168.1.200"
+		heliosIP := fmt.Sprintf("10.%d.1.100", testID)
+		differentIP := fmt.Sprintf("10.%d.1.200", testID)
 
 		By("Creating a new HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -276,7 +276,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		service1Name := fmt.Sprintf("test-service-1-%d", testID)
 		service2Name := fmt.Sprintf("test-service-2-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
-		ipRange := "192.168.1.100-192.168.1.200"
+		ipRange := fmt.Sprintf("10.%d.1.100-10.%d.1.200", testID, testID)
 
 		By("Creating a HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -299,7 +299,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: "192.168.1.100",
+				LoadBalancerIP: fmt.Sprintf("10.%d.1.100", testID),
 				Ports:          []corev1.ServicePort{{Port: 80}},
 			},
 		}
@@ -312,7 +312,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:           corev1.ServiceTypeLoadBalancer,
-				LoadBalancerIP: "192.168.1.101",
+				LoadBalancerIP: fmt.Sprintf("10.%d.1.101", testID),
 				Ports:          []corev1.ServicePort{{Port: 81}},
 			},
 		}
@@ -341,7 +341,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		resourceName := fmt.Sprintf("test-helios-%d", testID)
 		serviceName := fmt.Sprintf("test-service-%d", testID)
 		namespacedName := types.NamespacedName{Name: resourceName, Namespace: namespace}
-		ipRange := "192.168.1.100"
+		ipRange := fmt.Sprintf("10.%d.1.100", testID)
 
 		By("Creating a HeliosConfig")
 		heliosConfig := &balancerv1.HeliosConfig{
@@ -417,7 +417,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 				Namespace: namespace,
 			},
 			Spec: balancerv1.HeliosConfigSpec{
-				IPRange: "192.168.1.100",
+				IPRange: fmt.Sprintf("10.%d.1.100", testID),
 				Method:  "RoundRobin",
 			},
 		}

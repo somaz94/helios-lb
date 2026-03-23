@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	balancerv1 "github.com/somaz94/helios-lb/api/v1"
 	"github.com/somaz94/helios-lb/internal/loadbalancer"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -1289,5 +1291,290 @@ func TestReconcile_MaxAllocations(t *testing.T) {
 
 	if len(updatedConfig.Status.AllocatedIPs) > 1 {
 		t.Errorf("expected at most 1 allocation due to maxAllocations, got %d", len(updatedConfig.Status.AllocatedIPs))
+	}
+}
+
+func TestReconcile_IPConflictDetected(t *testing.T) {
+	scheme := newTestScheme()
+	// Config 1: already has an allocated IP in the range
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "helios-1",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.110",
+			Method:  "RoundRobin",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-a": "192.168.1.100",
+			},
+			Phase: balancerv1.StateActive,
+		},
+	}
+	// Config 2: overlapping range - should detect conflict
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "helios-2",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.120",
+			Method:  "RoundRobin",
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "helios-2", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should requeue with longer interval due to conflict
+	if result.RequeueAfter != 30*time.Second {
+		t.Errorf("expected 30s requeue for conflict, got %v", result.RequeueAfter)
+	}
+
+	// Verify Degraded condition was set
+	var updated balancerv1.HeliosConfig
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "helios-2", Namespace: "default"}, &updated); getErr != nil {
+		t.Fatalf("failed to get HeliosConfig: %v", getErr)
+	}
+	foundDegraded := false
+	for _, c := range updated.Status.Conditions {
+		if c.Type == balancerv1.ConditionTypeDegraded && c.Status == metav1.ConditionTrue && c.Reason == balancerv1.ReasonIPConflict {
+			foundDegraded = true
+			break
+		}
+	}
+	if !foundDegraded {
+		t.Error("expected Degraded condition with reason IPConflict")
+	}
+}
+
+func TestReconcile_NoIPConflict_NonOverlappingRanges(t *testing.T) {
+	scheme := newTestScheme()
+	// Config 1: range 192.168.1.100-110
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "helios-1",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.110",
+			Method:  "RoundRobin",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-a": "192.168.1.100",
+			},
+			Phase: balancerv1.StateActive,
+		},
+	}
+	// Config 2: non-overlapping range
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "helios-2",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "10.0.0.1-10.0.0.10",
+			Method:  "RoundRobin",
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "helios-2", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should proceed normally (periodic requeue), not 30s conflict requeue
+	if result.RequeueAfter == 30*time.Second {
+		t.Error("expected normal requeue, not 30s conflict requeue")
+	}
+}
+
+func TestCheckIPConflicts_DetectsOverlap(t *testing.T) {
+	scheme := newTestScheme()
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-1",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.200",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-a": "192.168.1.105",
+				"svc-b": "192.168.1.110",
+			},
+		},
+	}
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-2",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.120",
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2).
+		Build()
+
+	mgr := &IPManager{
+		Client:     cl,
+		NetworkMgr: network.NewNetworkManager(),
+		Metrics:    metrics.NewMetricsRecorder(),
+	}
+
+	conflicts, err := mgr.CheckIPConflicts(context.Background(), helios2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(conflicts) != 2 {
+		t.Fatalf("expected 2 conflicts, got %d", len(conflicts))
+	}
+	if _, ok := conflicts["192.168.1.105"]; !ok {
+		t.Error("expected conflict for 192.168.1.105")
+	}
+	if _, ok := conflicts["192.168.1.110"]; !ok {
+		t.Error("expected conflict for 192.168.1.110")
+	}
+}
+
+func TestCheckIPConflicts_NoConflict(t *testing.T) {
+	scheme := newTestScheme()
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-1",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "10.0.0.1-10.0.0.10",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-a": "10.0.0.5",
+			},
+		},
+	}
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-2",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.200",
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2).
+		Build()
+
+	mgr := &IPManager{
+		Client:     cl,
+		NetworkMgr: network.NewNetworkManager(),
+		Metrics:    metrics.NewMetricsRecorder(),
+	}
+
+	conflicts, err := mgr.CheckIPConflicts(context.Background(), helios2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if conflicts != nil {
+		t.Errorf("expected no conflicts, got %v", conflicts)
+	}
+}
+
+func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
+	scheme := newTestScheme()
+	// helios-1 has .100 allocated
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-1",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.110",
+		},
+		Status: balancerv1.HeliosConfigStatus{
+			AllocatedIPs: map[string]string{
+				"svc-a": "192.168.1.100",
+			},
+		},
+	}
+	// helios-2 uses overlapping range
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "helios-2",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.110",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+
+	networkMgr := network.NewNetworkManager()
+	mgr := &IPManager{
+		Client:     cl,
+		NetworkMgr: networkMgr,
+		Metrics:    metrics.NewMetricsRecorder(),
+	}
+
+	logger := ctrl.Log.WithName("test")
+	ip, err := mgr.AllocateAndAssign(context.Background(), logger, helios2, svc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should skip .100 (used by helios-1) and allocate .101
+	if ip == "192.168.1.100" {
+		t.Error("should not allocate 192.168.1.100 which is used by another config")
+	}
+	if ip != "192.168.1.101" {
+		t.Errorf("expected 192.168.1.101, got %s", ip)
 	}
 }
