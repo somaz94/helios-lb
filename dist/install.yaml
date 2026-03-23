@@ -95,9 +95,16 @@ spec:
                 type: object
               ipRange:
                 description: |-
-                  IPRange defines the IP address range for load balancer.
+                  IPRange defines the IPv4 address range for load balancer.
                   Supports single IP ("192.168.1.100"), range ("192.168.1.100-192.168.1.200"),
                   and CIDR notation ("192.168.1.0/24").
+                type: string
+              ipv6Range:
+                description: |-
+                  IPv6Range defines the IPv6 address range for dual-stack load balancer.
+                  Supports single IP ("fd00::1"), range ("fd00::1-fd00::ff"),
+                  and CIDR notation ("fd00::/120").
+                  When set alongside IPRange, enables dual-stack allocation.
                 type: string
               maxAllocations:
                 default: 0
@@ -193,7 +200,13 @@ spec:
                 additionalProperties:
                   type: string
                 description: AllocatedIPs is a map of service names to their allocated
-                  IPs
+                  IPv4 addresses
+                type: object
+              allocatedIPv6s:
+                additionalProperties:
+                  type: string
+                description: AllocatedIPv6s is a map of service names to their allocated
+                  IPv6 addresses (dual-stack)
                 type: object
               conditions:
                 description: Conditions represent the latest available observations
@@ -385,6 +398,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - services
   verbs:
   - create
@@ -549,7 +569,7 @@ spec:
         - --health-probe-bind-address=:9082
         command:
         - /manager
-        image: somaz940/helios-lb:v0.3.0
+        image: somaz940/helios-lb:v0.4.0
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
