@@ -45,6 +45,11 @@ var _ = Describe("HeliosConfig Controller", func() {
 			NetworkMgr: networkMgr,
 			Balancer:   balancer,
 			Metrics:    metricsRecorder,
+			IPMgr: &IPManager{
+				Client:     k8sClient,
+				NetworkMgr: networkMgr,
+				Metrics:    metricsRecorder,
+			},
 		}
 	})
 
@@ -465,6 +470,11 @@ var _ = Describe("SetupWithManager", func() {
 			NetworkMgr: networkMgr,
 			Balancer:   balancer,
 			Metrics:    metricsRecorder,
+			IPMgr: &IPManager{
+				Client:     mgr.GetClient(),
+				NetworkMgr: networkMgr,
+				Metrics:    metricsRecorder,
+			},
 		}
 
 		err = reconciler.SetupWithManager(mgr)
