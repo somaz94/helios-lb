@@ -129,6 +129,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		serviceList.Items,
 		heliosConfig.Spec.NamespaceSelector,
 		heliosConfig.Spec.IPRange,
+		heliosConfig.Spec.IPv6Range,
 	)
 
 	logger.V(1).Info("discovered eligible services", LogKeyServiceCount, len(eligible))
@@ -176,7 +177,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		// Allocate IP and assign to service
-		ip, err := r.IPMgr.AllocateAndAssign(ctx, svcLogger, &heliosConfig, svc)
+		ip, ipv6, err := r.IPMgr.AllocateAndAssign(ctx, svcLogger, &heliosConfig, svc)
 		if err != nil {
 			svcLogger.Error(err, "failed to allocate and assign IP")
 			r.Recorder.Eventf(&heliosConfig, corev1.EventTypeWarning, "AllocationFailed",
@@ -205,14 +206,25 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
-		r.Recorder.Eventf(&heliosConfig, corev1.EventTypeNormal, "IPAllocated",
-			"Allocated IP %s to service %s/%s", ip, svc.Namespace, svc.Name)
+		if ipv6 != "" {
+			r.Recorder.Eventf(&heliosConfig, corev1.EventTypeNormal, "IPAllocated",
+				"Allocated dual-stack IPs %s/%s to service %s/%s", ip, ipv6, svc.Namespace, svc.Name)
+		} else {
+			r.Recorder.Eventf(&heliosConfig, corev1.EventTypeNormal, "IPAllocated",
+				"Allocated IP %s to service %s/%s", ip, svc.Namespace, svc.Name)
+		}
 
 		// Update HeliosConfig status
 		if heliosConfig.Status.AllocatedIPs == nil {
 			heliosConfig.Status.AllocatedIPs = make(map[string]string)
 		}
 		heliosConfig.Status.AllocatedIPs[svc.Name] = ip
+		if ipv6 != "" {
+			if heliosConfig.Status.AllocatedIPv6s == nil {
+				heliosConfig.Status.AllocatedIPv6s = make(map[string]string)
+			}
+			heliosConfig.Status.AllocatedIPv6s[svc.Name] = ipv6
+		}
 		heliosConfig.Status.Phase = balancerv1.StateActive
 		heliosConfig.Status.State = balancerv1.StateActive
 		heliosConfig.Status.Message = "IP allocated successfully"

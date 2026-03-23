@@ -6,7 +6,8 @@ import (
 )
 
 // FilterEligibleServices returns LoadBalancer services that should be managed by the given config.
-func FilterEligibleServices(services []corev1.Service, namespaceSelector []string, ipRange string) []corev1.Service {
+// For dual-stack configs, a service matches if its loadBalancerIP falls within either the IPv4 or IPv6 range.
+func FilterEligibleServices(services []corev1.Service, namespaceSelector []string, ipRange string, ipv6Range ...string) []corev1.Service {
 	nsAllowed := make(map[string]bool, len(namespaceSelector))
 	for _, ns := range namespaceSelector {
 		nsAllowed[ns] = true
@@ -27,9 +28,13 @@ func FilterEligibleServices(services []corev1.Service, namespaceSelector []strin
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			continue
 		}
-		// If loadBalancerIP is set, it must fall within the config's IP range
-		if svc.Spec.LoadBalancerIP != "" && !network.IPInRange(svc.Spec.LoadBalancerIP, ipRange) {
-			continue
+		// If loadBalancerIP is set, it must fall within the config's IP range (IPv4 or IPv6)
+		if svc.Spec.LoadBalancerIP != "" {
+			inV4 := network.IPInRange(svc.Spec.LoadBalancerIP, ipRange)
+			inV6 := len(ipv6Range) > 0 && ipv6Range[0] != "" && network.IPInRange(svc.Spec.LoadBalancerIP, ipv6Range[0])
+			if !inV4 && !inV6 {
+				continue
+			}
 		}
 		result = append(result, svc)
 	}

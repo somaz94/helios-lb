@@ -144,6 +144,13 @@ func (in *HeliosConfigStatus) DeepCopyInto(out *HeliosConfigStatus) {
 			(*out)[key] = val
 		}
 	}
+	if in.AllocatedIPv6s != nil {
+		in, out := &in.AllocatedIPv6s, &out.AllocatedIPv6s
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.LastUpdated.DeepCopyInto(&out.LastUpdated)
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions

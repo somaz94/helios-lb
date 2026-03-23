@@ -1566,7 +1566,7 @@ func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
 	}
 
 	logger := ctrl.Log.WithName("test")
-	ip, err := mgr.AllocateAndAssign(context.Background(), logger, helios2, svc)
+	ip, _, err := mgr.AllocateAndAssign(context.Background(), logger, helios2, svc)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1576,5 +1576,196 @@ func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
 	}
 	if ip != "192.168.1.101" {
 		t.Errorf("expected 192.168.1.101, got %s", ip)
+	}
+}
+
+func TestAllocateAndAssign_DualStack(t *testing.T) {
+	scheme := newTestScheme()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange:   "192.168.1.100-192.168.1.110",
+			IPv6Range: "fd00::1-fd00::10",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+
+	networkMgr := network.NewNetworkManager()
+	mgr := &IPManager{
+		Client:     cl,
+		NetworkMgr: networkMgr,
+		Metrics:    metrics.NewMetricsRecorder(),
+	}
+
+	logger := ctrl.Log.WithName("test")
+	ip, ipv6, err := mgr.AllocateAndAssign(context.Background(), logger, helios, svc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ip != "192.168.1.100" {
+		t.Errorf("expected IPv4 192.168.1.100, got %s", ip)
+	}
+	if ipv6 != "fd00::1" {
+		t.Errorf("expected IPv6 fd00::1, got %s", ipv6)
+	}
+
+	// Verify service got both IPs in ingress
+	var updatedSvc corev1.Service
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc)
+	if err != nil {
+		t.Fatalf("failed to get service: %v", err)
+	}
+	if len(updatedSvc.Status.LoadBalancer.Ingress) != 2 {
+		t.Fatalf("expected 2 ingress entries (dual-stack), got %d", len(updatedSvc.Status.LoadBalancer.Ingress))
+	}
+	if updatedSvc.Status.LoadBalancer.Ingress[0].IP != "192.168.1.100" {
+		t.Errorf("expected first ingress IP 192.168.1.100, got %s", updatedSvc.Status.LoadBalancer.Ingress[0].IP)
+	}
+	if updatedSvc.Status.LoadBalancer.Ingress[1].IP != "fd00::1" {
+		t.Errorf("expected second ingress IP fd00::1, got %s", updatedSvc.Status.LoadBalancer.Ingress[1].IP)
+	}
+}
+
+func TestAllocateAndAssign_SingleStack(t *testing.T) {
+	scheme := newTestScheme()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP: "192.168.1.100",
+			Ports:          []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+
+	networkMgr := network.NewNetworkManager()
+	mgr := &IPManager{
+		Client:     cl,
+		NetworkMgr: networkMgr,
+		Metrics:    metrics.NewMetricsRecorder(),
+	}
+
+	logger := ctrl.Log.WithName("test")
+	ip, ipv6, err := mgr.AllocateAndAssign(context.Background(), logger, helios, svc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ip != "192.168.1.100" {
+		t.Errorf("expected 192.168.1.100, got %s", ip)
+	}
+	if ipv6 != "" {
+		t.Errorf("expected empty IPv6 for single-stack, got %s", ipv6)
+	}
+
+	// Verify service got only 1 ingress entry
+	var updatedSvc corev1.Service
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc)
+	if err != nil {
+		t.Fatalf("failed to get service: %v", err)
+	}
+	if len(updatedSvc.Status.LoadBalancer.Ingress) != 1 {
+		t.Fatalf("expected 1 ingress entry (single-stack), got %d", len(updatedSvc.Status.LoadBalancer.Ingress))
+	}
+}
+
+func TestReconcile_DualStack(t *testing.T) {
+	scheme := newTestScheme()
+	helios := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange:   "172.16.0.100",
+			IPv6Range: "fd00::100",
+			Method:    "RoundRobin",
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP: "172.16.0.100",
+			Ports:          []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios, svc).
+		WithStatusSubresource(&balancerv1.HeliosConfig{}, &corev1.Service{}).
+		Build()
+	r := newTestReconciler(cl)
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Error("expected requeue after")
+	}
+
+	// Verify HeliosConfig status has both IPv4 and IPv6
+	var updated balancerv1.HeliosConfig
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updated); getErr != nil {
+		t.Fatalf("failed to get HeliosConfig: %v", getErr)
+	}
+	if updated.Status.AllocatedIPs["test-svc"] != "172.16.0.100" {
+		t.Errorf("expected IPv4 172.16.0.100, got %s", updated.Status.AllocatedIPs["test-svc"])
+	}
+	if updated.Status.AllocatedIPv6s["test-svc"] != "fd00::100" {
+		t.Errorf("expected IPv6 fd00::100, got %s", updated.Status.AllocatedIPv6s["test-svc"])
+	}
+
+	// Verify service has dual-stack ingress
+	var updatedSvc corev1.Service
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc); getErr != nil {
+		t.Fatalf("failed to get service: %v", getErr)
+	}
+	if len(updatedSvc.Status.LoadBalancer.Ingress) != 2 {
+		t.Fatalf("expected 2 ingress entries, got %d", len(updatedSvc.Status.LoadBalancer.Ingress))
 	}
 }
