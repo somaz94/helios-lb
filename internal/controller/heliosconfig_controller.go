@@ -157,14 +157,16 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Allocate IP
 		ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 		if err != nil {
-			svcLogger.Error(err, "failed to allocate IP")
+			allocErr := NewRetryableError("IP allocation failed", err)
+			svcLogger.Error(allocErr, "failed to allocate IP")
 			heliosConfig.Status.Phase = balancerv1.StateFailed
 			heliosConfig.Status.State = balancerv1.StateFailed
-			heliosConfig.Status.Message = err.Error()
+			heliosConfig.Status.Message = allocErr.Error()
 			if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
 				svcLogger.Error(statusErr, "failed to update status after allocation failure")
 			}
-			return ctrl.Result{}, err
+			r.Metrics.RecordRequeueReason(heliosConfig.Name, heliosConfig.Namespace, "ip_allocation_error")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
 		svcLogger = svcLogger.WithValues(LogKeyIP, ip)
@@ -194,7 +196,8 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			return r.Update(ctx, &currentSvc)
 		}); err != nil {
-			svcLogger.Error(err, "failed to update service with allocated IP")
+			svcUpdateErr := NewRetryableError("service update failed", err)
+			svcLogger.Error(svcUpdateErr, "failed to update service with allocated IP")
 			continue
 		}
 

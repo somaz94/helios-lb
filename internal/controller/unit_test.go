@@ -965,12 +965,15 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
 	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
 
-	_, err := r.Reconcile(context.Background(), reconcile.Request{
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
 	})
-	// Should return the IP allocation error
-	if err == nil {
-		t.Fatal("expected error from IP allocation, got nil")
+	// Should requeue instead of returning error (retryable error pattern)
+	if err != nil {
+		t.Fatalf("expected nil error with requeue, got %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("expected RequeueAfter to be set for retryable IP allocation error")
 	}
 
 	// Verify the HeliosConfig status was updated to Failed
