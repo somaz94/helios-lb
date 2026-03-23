@@ -163,6 +163,13 @@ func main() {
 		MetricsEnabled: true,
 	})
 
+	// Initialize IP manager
+	ipMgr := &controller.IPManager{
+		Client:     mgr.GetClient(),
+		NetworkMgr: networkMgr,
+		Metrics:    metricsRecorder,
+	}
+
 	// Create and set up the HeliosConfig controller
 	if err = (&controller.HeliosConfigReconciler{
 		Client:     mgr.GetClient(),
@@ -170,6 +177,7 @@ func main() {
 		NetworkMgr: networkMgr,
 		Balancer:   lb,
 		Metrics:    metricsRecorder,
+		IPMgr:      ipMgr,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HeliosConfig")
 		os.Exit(1)

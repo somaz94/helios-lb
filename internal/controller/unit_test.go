@@ -29,14 +29,21 @@ func newTestScheme() *runtime.Scheme {
 }
 
 func newTestReconciler(cl client.Client) *HeliosConfigReconciler {
+	networkMgr := network.NewNetworkManager()
+	metricsRecorder := metrics.NewMetricsRecorder()
 	return &HeliosConfigReconciler{
 		Client:     cl,
 		Scheme:     newTestScheme(),
-		NetworkMgr: network.NewNetworkManager(),
+		NetworkMgr: networkMgr,
 		Balancer: loadbalancer.NewLoadBalancer(loadbalancer.BalancerConfig{
 			Type: loadbalancer.RoundRobin,
 		}),
-		Metrics: metrics.NewMetricsRecorder(),
+		Metrics: metricsRecorder,
+		IPMgr: &IPManager{
+			Client:     cl,
+			NetworkMgr: networkMgr,
+			Metrics:    metricsRecorder,
+		},
 	}
 }
 
