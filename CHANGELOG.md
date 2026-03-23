@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-03-23)
+## [v0.4.0](https://github.com/somaz94/helios-lb/compare/v0.3.0...v0.4.0) (2026-03-23)
 
 ### Features
 
@@ -23,12 +23,17 @@ All notable changes to this project will be documented in this file.
 - add custom error types for retryable/permanent error handling ([9ec9aa4](https://github.com/somaz94/helios-lb/commit/9ec9aa49631ea7a0e8876a43aa74d75e96c1a240))
 - apply structured logging with consistent key-value patterns ([fcffdb0](https://github.com/somaz94/helios-lb/commit/fcffdb042354391c82a0268f5f3dc61e999566bb))
 
+### Documentation
+
+- update README, examples, helm chart, and tests for v0.4.0 ([ffacb3a](https://github.com/somaz94/helios-lb/commit/ffacb3a2ac7ae07ab9aec6779cc4454e279abfc7))
+
 ### Continuous Integration
 
 - restrict push trigger to main branch to prevent duplicate CI runs ([924fbb8](https://github.com/somaz94/helios-lb/commit/924fbb8a08fbb4243fde1f388b5be5e61b120eaa))
 
 ### Chores
 
+- bump version to v0.4.0 ([c8cb1b9](https://github.com/somaz94/helios-lb/commit/c8cb1b90adebd9021eba8b827b53d94103cc0ff3))
 - regenerate RBAC role with events permission ([6d7231a](https://github.com/somaz94/helios-lb/commit/6d7231a97dd505bb9d0fa3b7e2b20627008c1546))
 - regenerate RBAC role with events permission ([948cecb](https://github.com/somaz94/helios-lb/commit/948cecbc6fa1fc843dfb8b23beb1928389c9baf0))
 
