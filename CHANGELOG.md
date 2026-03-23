@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Code Refactoring
 
+- extract IP allocation and service filtering from controller ([7a5fc5e](https://github.com/somaz94/helios-lb/commit/7a5fc5e1beadf0616b87989a36611e479326c887))
 - add custom error types for retryable/permanent error handling ([9ec9aa4](https://github.com/somaz94/helios-lb/commit/9ec9aa49631ea7a0e8876a43aa74d75e96c1a240))
 - apply structured logging with consistent key-value patterns ([fcffdb0](https://github.com/somaz94/helios-lb/commit/fcffdb042354391c82a0268f5f3dc61e999566bb))
 
