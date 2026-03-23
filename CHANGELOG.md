@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- add IP conflict detection between overlapping HeliosConfig ranges ([6f9b7a5](https://github.com/somaz94/helios-lb/commit/6f9b7a55f39b6181006b92dbd1028dfb635676ad))
 - implement Status Conditions for standard Kubernetes observability ([65f49c9](https://github.com/somaz94/helios-lb/commit/65f49c99e8cd126f66442e253364fd0638068f39))
 - add Kubernetes Events recording for IP lifecycle ([17dd568](https://github.com/somaz94/helios-lb/commit/17dd56829e60d09191edc0fcf6e03bc231c1977a))
 
@@ -29,6 +30,10 @@ All notable changes to this project will be documented in this file.
 
 - regenerate RBAC role with events permission ([6d7231a](https://github.com/somaz94/helios-lb/commit/6d7231a97dd505bb9d0fa3b7e2b20627008c1546))
 - regenerate RBAC role with events permission ([948cecb](https://github.com/somaz94/helios-lb/commit/948cecbc6fa1fc843dfb8b23beb1928389c9baf0))
+
+### Reverts
+
+- remove manual CHANGELOG edit (auto-generated) ([3bcc740](https://github.com/somaz94/helios-lb/commit/3bcc7406705e0375c0b48009d760a5424f1cfa11))
 
 ### Contributors
 
