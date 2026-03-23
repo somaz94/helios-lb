@@ -3,10 +3,36 @@ package loadbalancer
 import (
 	"hash/fnv"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 )
 
-// NextBackend returns the next backend server based on the balancing method
+// Compile-time interface checks
+var (
+	_ Algorithm = (*roundRobinAlgorithm)(nil)
+	_ Algorithm = (*leastConnectionAlgorithm)(nil)
+	_ Algorithm = (*weightedRoundRobinAlgorithm)(nil)
+	_ Algorithm = (*ipHashAlgorithm)(nil)
+	_ Algorithm = (*randomAlgorithm)(nil)
+)
+
+// NewAlgorithm creates an Algorithm implementation for the given type.
+func NewAlgorithm(balancerType BalancerType, weights []Weight) Algorithm {
+	switch balancerType {
+	case LeastConnection:
+		return &leastConnectionAlgorithm{}
+	case WeightedRoundRobin:
+		return &weightedRoundRobinAlgorithm{weights: weights}
+	case IPHash:
+		return &ipHashAlgorithm{}
+	case RandomSelection:
+		return &randomAlgorithm{}
+	default:
+		return &roundRobinAlgorithm{}
+	}
+}
+
+// NextBackend returns the next backend server using the configured algorithm.
 func (lb *LoadBalancer) NextBackend(serviceName string, clientIP string) *Backend {
 	lb.mu.RLock()
 	backends, exists := lb.backends[serviceName]
@@ -19,43 +45,40 @@ func (lb *LoadBalancer) NextBackend(serviceName string, clientIP string) *Backen
 	copy(backendsCopy, backends)
 	lb.mu.RUnlock()
 
-	switch lb.config.Type {
-	case LeastConnection:
-		return lb.leastConnectionBackend(backendsCopy)
-	case WeightedRoundRobin:
-		return lb.weightedRoundRobinBackend(backendsCopy)
-	case IPHash:
-		return lb.ipHashBackend(backendsCopy, clientIP)
-	case RandomSelection:
-		return lb.randomBackend(backendsCopy)
-	default: // RoundRobin
-		return lb.roundRobinBackend(backendsCopy)
-	}
+	return lb.algorithm.Select(backendsCopy, serviceName, clientIP)
 }
 
-// roundRobinBackend implements round-robin selection
-func (lb *LoadBalancer) roundRobinBackend(backends []*Backend) *Backend {
+// --- RoundRobin ---
+
+type roundRobinAlgorithm struct {
+	mu     sync.Mutex
+	states map[string]*RoundRobinState
+}
+
+func (a *roundRobinAlgorithm) Select(backends []*Backend, serviceName string, _ string) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
 
-	serviceName := backends[0].ServiceName
-
-	// Initialize and access rrStates separately
-	lb.mu.Lock()
-	if _, exists := lb.rrStates[serviceName]; !exists {
-		lb.rrStates[serviceName] = &RoundRobinState{}
+	a.mu.Lock()
+	if a.states == nil {
+		a.states = make(map[string]*RoundRobinState)
 	}
-	state := lb.rrStates[serviceName]
-	lb.mu.Unlock()
+	if _, exists := a.states[serviceName]; !exists {
+		a.states[serviceName] = &RoundRobinState{}
+	}
+	state := a.states[serviceName]
+	a.mu.Unlock()
 
-	// Thread-safe index increment using atomic operation
 	index := atomic.AddUint32(&state.current, 1) % uint32(len(backends))
 	return backends[index]
 }
 
-// leastConnectionBackend implements least-connection selection
-func (lb *LoadBalancer) leastConnectionBackend(backends []*Backend) *Backend {
+// --- LeastConnection ---
+
+type leastConnectionAlgorithm struct{}
+
+func (a *leastConnectionAlgorithm) Select(backends []*Backend, _ string, _ string) *Backend {
 	var leastConnBackend *Backend
 	leastConn := int32(^uint32(0) >> 1)
 
@@ -73,33 +96,39 @@ func (lb *LoadBalancer) leastConnectionBackend(backends []*Backend) *Backend {
 	return leastConnBackend
 }
 
-// Weighted Round Robin
-func (lb *LoadBalancer) weightedRoundRobinBackend(backends []*Backend) *Backend {
+// --- WeightedRoundRobin ---
+
+type weightedRoundRobinAlgorithm struct {
+	mu      sync.Mutex
+	states  map[string]*RoundRobinState
+	weights []Weight
+}
+
+func (a *weightedRoundRobinAlgorithm) Select(backends []*Backend, serviceName string, _ string) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
 
-	serviceName := backends[0].ServiceName
-	lb.mu.Lock()
-	if _, exists := lb.rrStates[serviceName]; !exists {
-		lb.rrStates[serviceName] = &RoundRobinState{}
+	a.mu.Lock()
+	if a.states == nil {
+		a.states = make(map[string]*RoundRobinState)
 	}
-	state := lb.rrStates[serviceName]
-	lb.mu.Unlock()
+	if _, exists := a.states[serviceName]; !exists {
+		a.states[serviceName] = &RoundRobinState{}
+	}
+	state := a.states[serviceName]
+	a.mu.Unlock()
 
-	// Filter only healthy backend and apply weight
 	var healthyBackends []*Backend
 	totalWeight := 0
 	for _, backend := range backends {
 		if backend.IsHealthy() {
-			// Find the weight setting that matches the ServiceName
-			for _, weight := range lb.config.Weights {
+			for _, weight := range a.weights {
 				if weight.ServiceName == backend.ServiceName {
 					backend.Weight = weight.Weight
 					break
 				}
 			}
-			// Use default 1 if weight is not set
 			if backend.Weight == 0 {
 				backend.Weight = 1
 			}
@@ -125,18 +154,19 @@ func (lb *LoadBalancer) weightedRoundRobinBackend(backends []*Backend) *Backend 
 	return healthyBackends[0]
 }
 
-// Based on IP hash
-func (lb *LoadBalancer) ipHashBackend(backends []*Backend, clientIP string) *Backend {
+// --- IPHash ---
+
+type ipHashAlgorithm struct{}
+
+func (a *ipHashAlgorithm) Select(backends []*Backend, _ string, clientIP string) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
 
-	// Converting IP to Hash Value
 	hash := fnv.New32a()
 	hash.Write([]byte(clientIP))
 	hashValue := hash.Sum32()
 
-	// Filtering only healthy backend
 	var healthyBackends []*Backend
 	for _, backend := range backends {
 		if backend.IsHealthy() {
@@ -151,13 +181,15 @@ func (lb *LoadBalancer) ipHashBackend(backends []*Backend, clientIP string) *Bac
 	return healthyBackends[hashValue%uint32(len(healthyBackends))]
 }
 
-// Random selection
-func (lb *LoadBalancer) randomBackend(backends []*Backend) *Backend {
+// --- Random ---
+
+type randomAlgorithm struct{}
+
+func (a *randomAlgorithm) Select(backends []*Backend, _ string, _ string) *Backend {
 	if len(backends) == 0 {
 		return nil
 	}
 
-	// Filtering only healthy backend
 	var healthyBackends []*Backend
 	for _, backend := range backends {
 		if backend.IsHealthy() {

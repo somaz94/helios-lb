@@ -519,6 +519,90 @@ func TestFindLoadBalancerServices_WithService(t *testing.T) {
 	}
 }
 
+func TestFindLoadBalancerServices_MultipleHeliosConfigs(t *testing.T) {
+	scheme := newTestScheme()
+	helios1 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-range-1",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "192.168.1.100-192.168.1.200",
+		},
+	}
+	helios2 := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helios-range-2",
+			Namespace: "default",
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange: "10.0.0.1-10.0.0.100",
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(helios1, helios2).
+		Build()
+	r := newTestReconciler(cl)
+
+	// Service with IP in range 1 should only enqueue helios-range-1
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP: "192.168.1.150",
+		},
+	}
+
+	requests := r.findLoadBalancerServices(context.Background(), svc)
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].Name != "helios-range-1" {
+		t.Errorf("expected helios-range-1, got %s", requests[0].Name)
+	}
+
+	// Service with IP in range 2 should only enqueue helios-range-2
+	svc2 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc-2",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:           corev1.ServiceTypeLoadBalancer,
+			LoadBalancerIP: "10.0.0.50",
+		},
+	}
+
+	requests2 := r.findLoadBalancerServices(context.Background(), svc2)
+	if len(requests2) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests2))
+	}
+	if requests2[0].Name != "helios-range-2" {
+		t.Errorf("expected helios-range-2, got %s", requests2[0].Name)
+	}
+
+	// Service without loadBalancerIP should enqueue all configs
+	svc3 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc-3",
+			Namespace: "default",
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeLoadBalancer,
+		},
+	}
+
+	requests3 := r.findLoadBalancerServices(context.Background(), svc3)
+	if len(requests3) != 2 {
+		t.Fatalf("expected 2 requests for service without loadBalancerIP, got %d", len(requests3))
+	}
+}
+
 func TestFindLoadBalancerServices_NoHeliosConfigs(t *testing.T) {
 	scheme := newTestScheme()
 	cl := fake.NewClientBuilder().

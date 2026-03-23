@@ -9,15 +9,24 @@ import (
 func NewLoadBalancer(config BalancerConfig) *LoadBalancer {
 	// Set default check interval if health check is enabled but interval is not positive
 	if config.HealthCheck && config.CheckInterval <= 0 {
-		config.CheckInterval = time.Second * 5 // 기본값 5초
+		config.CheckInterval = time.Second * 5
+	}
+
+	// Set default health check options if not configured
+	if config.HealthCheckOpts.Timeout <= 0 {
+		config.HealthCheckOpts.Timeout = time.Second
+	}
+	if config.HealthCheckOpts.Protocol == "" {
+		config.HealthCheckOpts.Protocol = "TCP"
 	}
 
 	lb := &LoadBalancer{
-		backends: make(map[string][]*Backend),
-		stats:    make(map[string]*LoadBalancerStats),
-		rrStates: make(map[string]*RoundRobinState),
-		config:   config,
-		stopCh:   make(chan struct{}),
+		backends:  make(map[string][]*Backend),
+		stats:     make(map[string]*LoadBalancerStats),
+		rrStates:  make(map[string]*RoundRobinState),
+		config:    config,
+		algorithm: NewAlgorithm(config.Type, config.Weights),
+		stopCh:    make(chan struct{}),
 	}
 
 	if config.HealthCheck {

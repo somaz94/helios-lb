@@ -84,6 +84,93 @@ func TestIPAllocator(t *testing.T) {
 	})
 }
 
+func TestIPAllocator_CIDR(t *testing.T) {
+	t.Run("CIDR /30 allocates usable IPs", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		ip1, err := allocator.AllocateIP("192.168.1.0/30")
+		if err != nil {
+			t.Fatalf("Failed to allocate IP from CIDR: %v", err)
+		}
+		// /30 has 4 addresses, skip network (0) and broadcast (3), usable: .1 and .2
+		if ip1 != "192.168.1.1" {
+			t.Errorf("Expected 192.168.1.1, got %s", ip1)
+		}
+
+		ip2, err := allocator.AllocateIP("192.168.1.0/30")
+		if err != nil {
+			t.Fatalf("Failed to allocate second IP from CIDR: %v", err)
+		}
+		if ip2 != "192.168.1.2" {
+			t.Errorf("Expected 192.168.1.2, got %s", ip2)
+		}
+
+		// Should be exhausted
+		_, err = allocator.AllocateIP("192.168.1.0/30")
+		if err == nil {
+			t.Error("Expected error when CIDR range is exhausted")
+		}
+	})
+
+	t.Run("CIDR /28 allocates multiple IPs", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		// /28 = 16 addresses, usable: .1 to .14
+		var ips []string
+		for i := 0; i < 14; i++ {
+			ip, err := allocator.AllocateIP("10.0.0.0/28")
+			if err != nil {
+				t.Fatalf("Failed to allocate IP %d: %v", i, err)
+			}
+			ips = append(ips, ip)
+		}
+		if ips[0] != "10.0.0.1" {
+			t.Errorf("Expected first usable IP 10.0.0.1, got %s", ips[0])
+		}
+		if ips[13] != "10.0.0.14" {
+			t.Errorf("Expected last usable IP 10.0.0.14, got %s", ips[13])
+		}
+	})
+
+	t.Run("Invalid CIDR format", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		_, err := allocator.AllocateIP("192.168.1.0/abc")
+		if err == nil {
+			t.Error("Expected error for invalid CIDR")
+		}
+	})
+}
+
+func TestIPInRange_CIDR(t *testing.T) {
+	t.Run("IP within CIDR", func(t *testing.T) {
+		if !IPInRange("192.168.1.50", "192.168.1.0/24") {
+			t.Error("Expected 192.168.1.50 to be in 192.168.1.0/24")
+		}
+	})
+
+	t.Run("IP outside CIDR", func(t *testing.T) {
+		if IPInRange("192.168.2.1", "192.168.1.0/24") {
+			t.Error("Expected 192.168.2.1 to NOT be in 192.168.1.0/24")
+		}
+	})
+
+	t.Run("Network address in CIDR", func(t *testing.T) {
+		if !IPInRange("192.168.1.0", "192.168.1.0/24") {
+			t.Error("Expected 192.168.1.0 to be in 192.168.1.0/24")
+		}
+	})
+
+	t.Run("Broadcast address in CIDR", func(t *testing.T) {
+		if !IPInRange("192.168.1.255", "192.168.1.0/24") {
+			t.Error("Expected 192.168.1.255 to be in 192.168.1.0/24")
+		}
+	})
+
+	t.Run("Invalid CIDR in range check", func(t *testing.T) {
+		if IPInRange("192.168.1.1", "invalid/cidr") {
+			t.Error("Expected false for invalid CIDR")
+		}
+	})
+}
+
 func TestIPInRange(t *testing.T) {
 	t.Run("IP within range", func(t *testing.T) {
 		if !IPInRange("192.168.1.5", "192.168.1.1-192.168.1.10") {

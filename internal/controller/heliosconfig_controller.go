@@ -109,78 +109,82 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
-		// Check if the service's loadBalancerIP falls within this HeliosConfig's IP range
-		isHeliosService := false
-		if svc.Spec.LoadBalancerIP != "" {
-			isHeliosService = network.IPInRange(svc.Spec.LoadBalancerIP, heliosConfig.Spec.IPRange)
+		// Skip services that already have an ingress IP assigned
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			continue
 		}
 
-		if len(svc.Status.LoadBalancer.Ingress) == 0 && isHeliosService {
-			// Allocate IP
-			ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
-			if err != nil {
-				log.Error(err, "failed to allocate IP", "service", svc.Name)
-				heliosConfig.Status.Phase = balancerv1.StateFailed
-				heliosConfig.Status.State = balancerv1.StateFailed
-				heliosConfig.Status.Message = err.Error()
-				if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
-					log.Error(statusErr, "failed to update status")
-				}
-				return ctrl.Result{}, err
-			}
-
-			// Retry on conflict for service update
-			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				// Get the latest service state
-				var currentSvc corev1.Service
-				if err := r.Get(ctx, types.NamespacedName{
-					Namespace: svc.Namespace,
-					Name:      svc.Name,
-				}, &currentSvc); err != nil {
-					return err
-				}
-
-				// Add annotation
-				if currentSvc.Annotations == nil {
-					currentSvc.Annotations = make(map[string]string)
-				}
-				currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
-
-				// Set loadBalancerClass in spec
-				currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
-
-				// Update status with allocated IP
-				currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
-					{IP: ip},
-				}
-
-				// Update service spec
-				if err := r.Status().Update(ctx, &currentSvc); err != nil {
-					return err
-				}
-
-				return r.Update(ctx, &currentSvc)
-			}); err != nil {
-				log.Error(err, "failed to update service")
-				continue
-			}
-
-			// Update HeliosConfig status
-			if heliosConfig.Status.AllocatedIPs == nil {
-				heliosConfig.Status.AllocatedIPs = make(map[string]string)
-			}
-			heliosConfig.Status.AllocatedIPs[svc.Name] = ip
-			heliosConfig.Status.Phase = balancerv1.StateActive
-			heliosConfig.Status.State = balancerv1.StateActive
-			heliosConfig.Status.Message = "IP allocated successfully"
-			if err := r.Status().Update(ctx, &heliosConfig); err != nil {
-				log.Error(err, "failed to update HeliosConfig status")
-				return ctrl.Result{}, err
-			}
-
-			// Record metrics
-			r.Metrics.RecordIPAllocation(ip, true)
+		// Determine if this service should be managed by this HeliosConfig:
+		// - If loadBalancerIP is set, it must fall within this config's IP range
+		// - If loadBalancerIP is not set, the service is eligible for auto-allocation
+		if svc.Spec.LoadBalancerIP != "" && !network.IPInRange(svc.Spec.LoadBalancerIP, heliosConfig.Spec.IPRange) {
+			continue
 		}
+
+		// Allocate IP
+		ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
+		if err != nil {
+			log.Error(err, "failed to allocate IP", "service", svc.Name)
+			heliosConfig.Status.Phase = balancerv1.StateFailed
+			heliosConfig.Status.State = balancerv1.StateFailed
+			heliosConfig.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
+				log.Error(statusErr, "failed to update status")
+			}
+			return ctrl.Result{}, err
+		}
+
+		// Retry on conflict for service update
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Get the latest service state
+			var currentSvc corev1.Service
+			if err := r.Get(ctx, types.NamespacedName{
+				Namespace: svc.Namespace,
+				Name:      svc.Name,
+			}, &currentSvc); err != nil {
+				return err
+			}
+
+			// Add annotation
+			if currentSvc.Annotations == nil {
+				currentSvc.Annotations = make(map[string]string)
+			}
+			currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
+
+			// Set loadBalancerClass in spec
+			currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
+
+			// Update status with allocated IP
+			currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
+				{IP: ip},
+			}
+
+			// Update service spec
+			if err := r.Status().Update(ctx, &currentSvc); err != nil {
+				return err
+			}
+
+			return r.Update(ctx, &currentSvc)
+		}); err != nil {
+			log.Error(err, "failed to update service")
+			continue
+		}
+
+		// Update HeliosConfig status
+		if heliosConfig.Status.AllocatedIPs == nil {
+			heliosConfig.Status.AllocatedIPs = make(map[string]string)
+		}
+		heliosConfig.Status.AllocatedIPs[svc.Name] = ip
+		heliosConfig.Status.Phase = balancerv1.StateActive
+		heliosConfig.Status.State = balancerv1.StateActive
+		heliosConfig.Status.Message = "IP allocated successfully"
+		if err := r.Status().Update(ctx, &heliosConfig); err != nil {
+			log.Error(err, "failed to update HeliosConfig status")
+			return ctrl.Result{}, err
+		}
+
+		// Record metrics
+		r.Metrics.RecordIPAllocation(ip, true)
 	}
 
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
@@ -239,14 +243,14 @@ func (r *HeliosConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// findLoadBalancerServices watches for LoadBalancer type services
+// findLoadBalancerServices watches for LoadBalancer type services and enqueues
+// all HeliosConfig resources whose IP range covers the service's loadBalancerIP.
 func (r *HeliosConfigReconciler) findLoadBalancerServices(ctx context.Context, obj client.Object) []reconcile.Request {
-	// Type assertion check only
-	if _, ok := obj.(*corev1.Service); !ok {
+	svc, ok := obj.(*corev1.Service)
+	if !ok {
 		return nil
 	}
 
-	// Get the HeliosConfig
 	log := log.FromContext(ctx)
 	var heliosConfigs balancerv1.HeliosConfigList
 	if err := r.List(ctx, &heliosConfigs); err != nil {
@@ -254,16 +258,19 @@ func (r *HeliosConfigReconciler) findLoadBalancerServices(ctx context.Context, o
 		return nil
 	}
 
-	// For now, we'll use the first HeliosConfig we find
-	if len(heliosConfigs.Items) > 0 {
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Name:      heliosConfigs.Items[0].Name,
-					Namespace: heliosConfigs.Items[0].Namespace,
-				},
-			},
+	var requests []reconcile.Request
+	for _, hc := range heliosConfigs.Items {
+		// If the service has a loadBalancerIP, only enqueue configs whose range covers it.
+		// If it has no loadBalancerIP, enqueue all configs so they can attempt allocation.
+		if svc.Spec.LoadBalancerIP != "" && !network.IPInRange(svc.Spec.LoadBalancerIP, hc.Spec.IPRange) {
+			continue
 		}
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      hc.Name,
+				Namespace: hc.Namespace,
+			},
+		})
 	}
-	return nil
+	return requests
 }

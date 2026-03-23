@@ -185,7 +185,11 @@ func TestHealthCheck(t *testing.T) {
 	balancer := NewLoadBalancer(BalancerConfig{
 		Type:          RoundRobin,
 		HealthCheck:   true,
-		CheckInterval: time.Millisecond * 5,
+		CheckInterval: time.Millisecond * 50,
+		HealthCheckOpts: HealthCheckOptions{
+			Timeout:  time.Millisecond * 10,
+			Protocol: "TCP",
+		},
 	})
 
 	backend := &Backend{
@@ -196,7 +200,7 @@ func TestHealthCheck(t *testing.T) {
 	backend.SetHealthy(true)
 	balancer.AddBackend(backend)
 
-	time.Sleep(time.Millisecond * 15)
+	time.Sleep(time.Millisecond * 100)
 
 	healthy := backend.IsHealthy()
 	balancer.Stop()
@@ -445,7 +449,7 @@ func TestEdgeCases(t *testing.T) {
 		lb := NewLoadBalancer(BalancerConfig{Type: RoundRobin})
 		defer lb.Stop()
 
-		got := lb.roundRobinBackend(nil)
+		got := lb.algorithm.Select(nil, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil for empty backends")
 		}
@@ -455,7 +459,7 @@ func TestEdgeCases(t *testing.T) {
 		lb := NewLoadBalancer(BalancerConfig{Type: WeightedRoundRobin})
 		defer lb.Stop()
 
-		got := lb.weightedRoundRobinBackend(nil)
+		got := lb.algorithm.Select(nil, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil for empty backends")
 		}
@@ -468,7 +472,7 @@ func TestEdgeCases(t *testing.T) {
 		backend := createTestBackend("192.168.1.1", "test-svc", 1)
 		backend.SetHealthy(false)
 
-		got := lb.weightedRoundRobinBackend([]*Backend{backend})
+		got := lb.algorithm.Select([]*Backend{backend}, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil when all backends unhealthy")
 		}
@@ -551,7 +555,7 @@ func TestEdgeCases(t *testing.T) {
 		lb := NewLoadBalancer(BalancerConfig{Type: IPHash})
 		defer lb.Stop()
 
-		got := lb.ipHashBackend(nil, "10.0.0.1")
+		got := lb.algorithm.Select(nil, "test-svc", "10.0.0.1")
 		if got != nil {
 			t.Error("Expected nil for empty backends")
 		}
@@ -564,7 +568,7 @@ func TestEdgeCases(t *testing.T) {
 		backend := createTestBackend("192.168.1.1", "test-svc", 1)
 		backend.SetHealthy(false)
 
-		got := lb.ipHashBackend([]*Backend{backend}, "10.0.0.1")
+		got := lb.algorithm.Select([]*Backend{backend}, "test-svc", "10.0.0.1")
 		if got != nil {
 			t.Error("Expected nil when all backends unhealthy")
 		}
@@ -574,7 +578,7 @@ func TestEdgeCases(t *testing.T) {
 		lb := NewLoadBalancer(BalancerConfig{Type: RandomSelection})
 		defer lb.Stop()
 
-		got := lb.randomBackend(nil)
+		got := lb.algorithm.Select(nil, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil for empty backends")
 		}
@@ -587,7 +591,7 @@ func TestEdgeCases(t *testing.T) {
 		backend := createTestBackend("192.168.1.1", "test-svc", 1)
 		backend.SetHealthy(false)
 
-		got := lb.randomBackend([]*Backend{backend})
+		got := lb.algorithm.Select([]*Backend{backend}, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil when all backends unhealthy")
 		}
@@ -605,7 +609,7 @@ func TestEdgeCases(t *testing.T) {
 		healthy.SetHealthy(true)
 		healthy.Connections = 10
 
-		got := lb.leastConnectionBackend([]*Backend{unhealthy, healthy})
+		got := lb.algorithm.Select([]*Backend{unhealthy, healthy}, "test-svc", "")
 		if got == nil {
 			t.Fatal("Expected non-nil backend")
 		}
@@ -621,7 +625,7 @@ func TestEdgeCases(t *testing.T) {
 		backend := createTestBackend("192.168.1.1", "test-svc", 1)
 		backend.SetHealthy(false)
 
-		got := lb.leastConnectionBackend([]*Backend{backend})
+		got := lb.algorithm.Select([]*Backend{backend}, "test-svc", "")
 		if got != nil {
 			t.Error("Expected nil when all backends unhealthy")
 		}
