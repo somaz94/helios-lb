@@ -73,6 +73,9 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `nodeSelector` | Node selector | `{}` |
 | `tolerations` | Tolerations | `[]` |
 | `affinity` | Affinity rules | `{}` |
+| `webhook.enabled` | Enable validating webhook | `false` |
+| `webhook.certManager.enabled` | Create cert-manager Issuer and Certificate | `false` |
+| `webhook.certManager.issuerName` | cert-manager Issuer name | `helios-lb-selfsigned-issuer` |
 | `customresource.basic.enabled` | Enable basic load balancer configuration | `false` |
 | `customresource.basic.name` | Basic configuration name | `heliosconfig-basic` |
 | `customresource.basic.ipRange` | IP range for basic configuration | `10.10.10.65` |
@@ -109,6 +112,20 @@ customresource:
       - port: 80
       - port: 443
 ```
+
+### Webhook with cert-manager
+
+To enable the validating webhook with automatic TLS certificate management:
+
+```yaml
+webhook:
+  enabled: true
+  certManager:
+    enabled: true
+```
+
+> **Note:** cert-manager must be installed in the cluster before enabling this option.
+> Without cert-manager, you must manually create a TLS Secret (`webhook-server-cert`) in the controller namespace.
 
 Local install Method:
 ```bash

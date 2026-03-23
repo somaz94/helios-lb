@@ -294,6 +294,26 @@ You should see an external IP assigned from your configured IP range.
 
 <br/>
 
+### Validating Webhook
+
+Helios-LB includes a validating webhook that checks IP range format, port validity, weight configuration, and IP range overlap between HeliosConfig resources.
+
+The webhook is **disabled by default** and can be enabled in three ways:
+
+1. **Without webhook (default)**: The controller runs without admission validation. CRD-level validation (kubebuilder markers) still applies.
+
+2. **With webhook + cert-manager**: Recommended for production. cert-manager automatically provisions and rotates TLS certificates.
+   ```bash
+   # Helm
+   helm install helios-lb helios-lb/helios-lb \
+     --set webhook.enabled=true \
+     --set webhook.certManager.enabled=true
+
+   # Kustomize: uncomment [WEBHOOK] and [CERTMANAGER] sections in config/default/kustomization.yaml
+   ```
+
+3. **With webhook, without cert-manager**: You must manually create a TLS Secret named `webhook-server-cert` in the controller namespace containing `tls.crt` and `tls.key`.
+
 ### System Ports
 
 The controller uses the following system ports:
