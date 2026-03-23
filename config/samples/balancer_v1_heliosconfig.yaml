@@ -6,5 +6,8 @@ spec:
   # IP range for virtual IP allocation (single IP or range format)
   # IMPORTANT: Replace with an unused IP in your network before applying
   # Use 'make find-free-ip' to scan for available IPs
+  # IPv6 supported: fd00::1, fd00::1-fd00::ff, fd00::/120
   ipRange: "<YOUR_FREE_IP>" # e.g. 192.168.1.100, 192.168.1.100-192.168.1.200, or 192.168.1.0/24
   method: RoundRobin  # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
+  # namespaceSelector: ["default"]  # Optional: restrict to specific namespaces
+  # maxAllocations: 10              # Optional: limit IP allocations (0 = unlimited)

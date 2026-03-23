@@ -97,6 +97,8 @@ customresource:
     name: "heliosconfig-basic"
     ipRange: "10.10.10.65"
     method: "RoundRobin"
+    # namespaceSelector: []  # Optional: restrict to specific namespaces
+    # maxAllocations: 0      # Optional: limit IP allocations (0 = unlimited)
 
   port:
     enabled: false
@@ -106,6 +108,8 @@ customresource:
     ports:
       - port: 80
       - port: 443
+    # namespaceSelector: []  # Optional: restrict to specific namespaces
+    # maxAllocations: 0      # Optional: limit IP allocations (0 = unlimited)
 
   weight:
     enabled: false
@@ -121,3 +125,5 @@ customresource:
         weight: 2
       - serviceName: "service3"
         weight: 1
+    # namespaceSelector: []  # Optional: restrict to specific namespaces
+    # maxAllocations: 0      # Optional: limit IP allocations (0 = unlimited)

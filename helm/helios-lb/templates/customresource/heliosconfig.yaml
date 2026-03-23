@@ -16,6 +16,13 @@ spec:
   weights:
     {{- toYaml .Values.customresource.basic.weights | nindent 4 }}
   {{- end }}
+  {{- if .Values.customresource.basic.namespaceSelector }}
+  namespaceSelector:
+    {{- toYaml .Values.customresource.basic.namespaceSelector | nindent 4 }}
+  {{- end }}
+  {{- if .Values.customresource.basic.maxAllocations }}
+  maxAllocations: {{ .Values.customresource.basic.maxAllocations }}
+  {{- end }}
 {{- end }}
 
 {{- if .Values.customresource.port.enabled }}
@@ -30,6 +37,13 @@ spec:
   {{- end }}
   ports:
     {{- toYaml .Values.customresource.port.ports | nindent 4 }}
+  {{- if .Values.customresource.port.namespaceSelector }}
+  namespaceSelector:
+    {{- toYaml .Values.customresource.port.namespaceSelector | nindent 4 }}
+  {{- end }}
+  {{- if .Values.customresource.port.maxAllocations }}
+  maxAllocations: {{ .Values.customresource.port.maxAllocations }}
+  {{- end }}
 {{- end }}
 
 {{- if .Values.customresource.weight.enabled }}
@@ -46,4 +60,11 @@ spec:
   {{- end }}
   weights:
     {{- toYaml .Values.customresource.weight.weights | nindent 4 }}
+  {{- if .Values.customresource.weight.namespaceSelector }}
+  namespaceSelector:
+    {{- toYaml .Values.customresource.weight.namespaceSelector | nindent 4 }}
+  {{- end }}
+  {{- if .Values.customresource.weight.maxAllocations }}
+  maxAllocations: {{ .Values.customresource.weight.maxAllocations }}
+  {{- end }}
 {{- end }}

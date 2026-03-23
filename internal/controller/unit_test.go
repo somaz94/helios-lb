@@ -1169,3 +1169,113 @@ func TestReconcile_ServiceUpdateError(t *testing.T) {
 		t.Error("expected requeue after")
 	}
 }
+
+func TestReconcile_NamespaceSelector(t *testing.T) {
+	scheme := newTestScheme()
+
+	heliosConfig := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange:           "10.0.0.1-10.0.0.10",
+			NamespaceSelector: []string{"allowed-ns"},
+		},
+	}
+
+	// Service in allowed namespace - should get IP
+	allowedSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc-allowed", Namespace: "allowed-ns"},
+		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+	}
+	// Service in non-allowed namespace - should be skipped
+	blockedSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc-blocked", Namespace: "other-ns"},
+		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(heliosConfig, allowedSvc, blockedSvc).
+		WithStatusSubresource(heliosConfig, allowedSvc, blockedSvc).
+		Build()
+
+	r := newTestReconciler(cl)
+	_, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify allowed service got an IP
+	var updatedAllowed corev1.Service
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: "svc-allowed", Namespace: "allowed-ns"}, &updatedAllowed); err != nil {
+		t.Fatalf("failed to get allowed service: %v", err)
+	}
+	if len(updatedAllowed.Status.LoadBalancer.Ingress) == 0 {
+		t.Error("expected allowed service to have an ingress IP")
+	}
+
+	// Verify blocked service did NOT get an IP
+	var updatedBlocked corev1.Service
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: "svc-blocked", Namespace: "other-ns"}, &updatedBlocked); err != nil {
+		t.Fatalf("failed to get blocked service: %v", err)
+	}
+	if len(updatedBlocked.Status.LoadBalancer.Ingress) != 0 {
+		t.Error("expected blocked service to NOT have an ingress IP")
+	}
+}
+
+func TestReconcile_MaxAllocations(t *testing.T) {
+	scheme := newTestScheme()
+
+	heliosConfig := &balancerv1.HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-helios",
+			Namespace:  "default",
+			Finalizers: []string{heliosConfigFinalizer},
+		},
+		Spec: balancerv1.HeliosConfigSpec{
+			IPRange:        "10.0.0.1-10.0.0.10",
+			MaxAllocations: 1,
+		},
+	}
+
+	svc1 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc1", Namespace: "default"},
+		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+	}
+	svc2 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc2", Namespace: "default"},
+		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(heliosConfig, svc1, svc2).
+		WithStatusSubresource(heliosConfig, svc1, svc2).
+		Build()
+
+	r := newTestReconciler(cl)
+
+	// First reconcile should allocate 1 IP then stop due to maxAllocations
+	_, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Check the HeliosConfig status
+	var updatedConfig balancerv1.HeliosConfig
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updatedConfig); err != nil {
+		t.Fatalf("failed to get helios config: %v", err)
+	}
+
+	if len(updatedConfig.Status.AllocatedIPs) > 1 {
+		t.Errorf("expected at most 1 allocation due to maxAllocations, got %d", len(updatedConfig.Status.AllocatedIPs))
+	}
+}

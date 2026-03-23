@@ -4,8 +4,11 @@ metadata:
   name: heliosconfig-sample-port
 spec:
   # IMPORTANT: Replace with an unused IP in your network (use 'make find-free-ip')
+  # IPv6 supported: fd00::1, fd00::1-fd00::ff, fd00::/120
   ipRange: "<YOUR_FREE_IP>"
   method: RoundRobin # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:
     - port: 80
     - port: 443
+  # namespaceSelector: ["default"]  # Optional: restrict to specific namespaces
+  # maxAllocations: 10              # Optional: limit IP allocations (0 = unlimited)
