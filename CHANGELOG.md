@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- add dual-stack (IPv4+IPv6) support for load balancer allocation ([4422166](https://github.com/somaz94/helios-lb/commit/4422166450c45ec55574cb65da251f7458c4e5bd))
 - add IP conflict detection between overlapping HeliosConfig ranges ([6f9b7a5](https://github.com/somaz94/helios-lb/commit/6f9b7a55f39b6181006b92dbd1028dfb635676ad))
 - implement Status Conditions for standard Kubernetes observability ([65f49c9](https://github.com/somaz94/helios-lb/commit/65f49c99e8cd126f66442e253364fd0638068f39))
 - add Kubernetes Events recording for IP lifecycle ([17dd568](https://github.com/somaz94/helios-lb/commit/17dd56829e60d09191edc0fcf6e03bc231c1977a))
