@@ -299,11 +299,11 @@ func TestDeepCopy(t *testing.T) {
 	hc := &HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
 		Spec: HeliosConfigSpec{
-			IPRange:  "10.0.0.1-10.0.0.10",
-			Method:   "RoundRobin",
-			Protocol: "TCP",
-			Ports:    []PortConfig{{Port: 80, Protocol: "TCP"}, {Port: 443}},
-			Weights:  []WeightConfig{{ServiceName: "svc1", Weight: 5}},
+			IPRange:           "10.0.0.1-10.0.0.10",
+			Method:            "RoundRobin",
+			Protocol:          "TCP",
+			Ports:             []PortConfig{{Port: 80, Protocol: "TCP"}, {Port: 443}},
+			Weights:           []WeightConfig{{ServiceName: "svc1", Weight: 5}},
 			NamespaceSelector: []string{"default", "production"},
 			MaxAllocations:    10,
 			HealthCheck: &HealthCheckConfig{
