@@ -36,6 +36,8 @@ import (
 	"github.com/somaz94/helios-lb/internal/metrics"
 	"github.com/somaz94/helios-lb/internal/network"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -96,6 +98,18 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			logger.Error(err, "failed to add finalizer")
 			return ctrl.Result{}, err
 		}
+		// Set initial condition
+		meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+			Type:               balancerv1.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             balancerv1.ReasonInitializing,
+			Message:            "HeliosConfig is initializing",
+			ObservedGeneration: heliosConfig.Generation,
+		})
+		if err := r.Status().Update(ctx, &heliosConfig); err != nil {
+			logger.Error(err, "failed to set initial condition")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Check if the HeliosConfig is being deleted
@@ -142,6 +156,20 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			heliosConfig.Status.Phase = balancerv1.StateFailed
 			heliosConfig.Status.State = balancerv1.StateFailed
 			heliosConfig.Status.Message = err.Error()
+			meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+				Type:               balancerv1.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             balancerv1.ReasonIPAllocationError,
+				Message:            err.Error(),
+				ObservedGeneration: heliosConfig.Generation,
+			})
+			meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+				Type:               balancerv1.ConditionTypeDegraded,
+				Status:             metav1.ConditionTrue,
+				Reason:             balancerv1.ReasonIPAllocationError,
+				Message:            err.Error(),
+				ObservedGeneration: heliosConfig.Generation,
+			})
 			if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
 				svcLogger.Error(statusErr, "failed to update status after allocation failure")
 			}
@@ -160,6 +188,20 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		heliosConfig.Status.Phase = balancerv1.StateActive
 		heliosConfig.Status.State = balancerv1.StateActive
 		heliosConfig.Status.Message = "IP allocated successfully"
+		meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+			Type:               balancerv1.ConditionTypeReady,
+			Status:             metav1.ConditionTrue,
+			Reason:             balancerv1.ReasonNetworkConfigured,
+			Message:            "IP allocated successfully",
+			ObservedGeneration: heliosConfig.Generation,
+		})
+		meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+			Type:               balancerv1.ConditionTypeDegraded,
+			Status:             metav1.ConditionFalse,
+			Reason:             balancerv1.ReasonNetworkConfigured,
+			Message:            "All allocations healthy",
+			ObservedGeneration: heliosConfig.Generation,
+		})
 		if err := r.Status().Update(ctx, &heliosConfig); err != nil {
 			svcLogger.Error(err, "failed to update HeliosConfig status")
 			return ctrl.Result{}, err
