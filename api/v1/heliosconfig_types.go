@@ -166,6 +166,7 @@ const (
 	ReasonNetworkConfigured = "NetworkConfigured"
 	ReasonNetworkError      = "NetworkError"
 	ReasonIPAllocationError = "IPAllocationError"
+	ReasonIPConflict        = "IPConflict"
 )
 
 // +kubebuilder:object:root=true

@@ -23,6 +23,7 @@ type IPManager struct {
 }
 
 // AllocateAndAssign allocates an IP from the config's range and assigns it to the service.
+// It marks IPs from other HeliosConfigs as used to prevent duplicates.
 // Returns the allocated IP or an error.
 func (m *IPManager) AllocateAndAssign(
 	ctx context.Context,
@@ -30,6 +31,20 @@ func (m *IPManager) AllocateAndAssign(
 	heliosConfig *balancerv1.HeliosConfig,
 	svc *corev1.Service,
 ) (string, error) {
+	// Mark IPs already allocated by other configs to avoid duplicates
+	var allConfigs balancerv1.HeliosConfigList
+	if err := m.Client.List(ctx, &allConfigs); err != nil {
+		return "", NewRetryableError("failed to list configs for conflict check", err)
+	}
+	for _, other := range allConfigs.Items {
+		if other.Name == heliosConfig.Name && other.Namespace == heliosConfig.Namespace {
+			continue
+		}
+		for _, ip := range other.Status.AllocatedIPs {
+			m.NetworkMgr.MarkUsed(ip)
+		}
+	}
+
 	ip, err := m.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 	if err != nil {
 		return "", NewRetryableError("IP allocation failed", err)
@@ -98,6 +113,35 @@ func (m *IPManager) ReleaseAll(
 			}
 		}
 	}
+}
+
+// CheckIPConflicts checks if any IP in this config's range is already allocated by another HeliosConfig.
+// Returns a map of conflicting IPs to the owning HeliosConfig name, or nil if no conflicts.
+func (m *IPManager) CheckIPConflicts(
+	ctx context.Context,
+	heliosConfig *balancerv1.HeliosConfig,
+) (map[string]string, error) {
+	var allConfigs balancerv1.HeliosConfigList
+	if err := m.Client.List(ctx, &allConfigs); err != nil {
+		return nil, fmt.Errorf("failed to list HeliosConfigs: %w", err)
+	}
+
+	conflicts := make(map[string]string)
+	for _, other := range allConfigs.Items {
+		if other.Name == heliosConfig.Name && other.Namespace == heliosConfig.Namespace {
+			continue
+		}
+		for svcName, ip := range other.Status.AllocatedIPs {
+			if network.IPInRange(ip, heliosConfig.Spec.IPRange) {
+				conflicts[ip] = fmt.Sprintf("%s/%s (svc: %s)", other.Namespace, other.Name, svcName)
+			}
+		}
+	}
+
+	if len(conflicts) == 0 {
+		return nil, nil
+	}
+	return conflicts, nil
 }
 
 // CheckQuota returns an error if the config has reached its max allocations.

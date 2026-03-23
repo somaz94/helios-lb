@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -131,6 +132,33 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	)
 
 	logger.V(1).Info("discovered eligible services", LogKeyServiceCount, len(eligible))
+
+	// Check for IP conflicts with other HeliosConfigs
+	conflicts, err := r.IPMgr.CheckIPConflicts(ctx, &heliosConfig)
+	if err != nil {
+		logger.Error(err, "failed to check IP conflicts")
+		return ctrl.Result{}, err
+	}
+	if len(conflicts) > 0 {
+		for ip, owner := range conflicts {
+			logger.Info("IP conflict detected",
+				LogKeyConflictIP, ip, LogKeyConflictOwner, owner)
+		}
+		r.Recorder.Eventf(&heliosConfig, corev1.EventTypeWarning, "IPConflict",
+			"IP range overlaps with other HeliosConfigs: %d conflicting IP(s)", len(conflicts))
+		meta.SetStatusCondition(&heliosConfig.Status.Conditions, metav1.Condition{
+			Type:               balancerv1.ConditionTypeDegraded,
+			Status:             metav1.ConditionTrue,
+			Reason:             balancerv1.ReasonIPConflict,
+			Message:            fmt.Sprintf("IP range conflicts with %d allocated IP(s) from other configs", len(conflicts)),
+			ObservedGeneration: heliosConfig.Generation,
+		})
+		if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
+			logger.Error(statusErr, "failed to update status after conflict detection")
+		}
+		r.Metrics.RecordRequeueReason(heliosConfig.Name, heliosConfig.Namespace, "ip_conflict")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
 
 	// Process each eligible service
 	for i := range eligible {
