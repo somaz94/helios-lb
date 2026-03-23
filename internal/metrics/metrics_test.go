@@ -76,6 +76,24 @@ func TestMetricsRecorder(t *testing.T) {
 		recorder.RecordOperation("service2", "connect", "success")
 	})
 
+	t.Run("Reconcile duration metrics", func(t *testing.T) {
+		recorder.RecordReconcileDuration("config1", "default", "success", 0.05)
+		recorder.RecordReconcileDuration("config1", "default", "error", 0.1)
+		recorder.RecordReconcileDuration("config2", "kube-system", "success", 0.001)
+	})
+
+	t.Run("Requeue reason metrics", func(t *testing.T) {
+		recorder.RecordRequeueReason("config1", "default", "periodic")
+		recorder.RecordRequeueReason("config1", "default", "ip_allocation_error")
+		recorder.RecordRequeueReason("config2", "default", "periodic")
+	})
+
+	t.Run("IP pool utilization metrics", func(t *testing.T) {
+		recorder.RecordIPPoolUtilization("config1", "default", 5)
+		recorder.RecordIPPoolUtilization("config2", "default", 0)
+		recorder.RecordIPPoolUtilization("config1", "default", 10)
+	})
+
 	t.Run("Edge cases", func(t *testing.T) {
 		// Test empty service name
 		recorder.RecordBackendHealth("192.168.1.1", "", true)
