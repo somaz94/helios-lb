@@ -60,13 +60,15 @@ const (
 )
 
 func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues(LogKeyConfig, req.Name, LogKeyNamespace, req.Namespace)
 	reconcileStart := time.Now()
 
 	var heliosConfig balancerv1.HeliosConfig
 	if err := r.Get(ctx, req.NamespacedName, &heliosConfig); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	logger = logger.WithValues(LogKeyIPRange, heliosConfig.Spec.IPRange, LogKeyPhase, heliosConfig.Status.Phase)
 
 	// Record metrics on defer
 	defer func() {
@@ -80,13 +82,16 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			heliosConfig.Status.Phase == balancerv1.StateActive)
 		r.Metrics.RecordIPPoolUtilization(heliosConfig.Name, heliosConfig.Namespace,
 			len(heliosConfig.Status.AllocatedIPs))
+		logger.V(1).Info("reconcile complete",
+			LogKeyReconcileTime, duration*1000,
+			LogKeyAllocatedIPs, len(heliosConfig.Status.AllocatedIPs))
 	}()
 
 	// Add finalizer if it doesn't exist
 	if !controllerutil.ContainsFinalizer(&heliosConfig, heliosConfigFinalizer) {
 		controllerutil.AddFinalizer(&heliosConfig, heliosConfigFinalizer)
 		if err := r.Update(ctx, &heliosConfig); err != nil {
-			log.Error(err, "failed to add finalizer")
+			logger.Error(err, "failed to add finalizer")
 			return ctrl.Result{}, err
 		}
 	}
@@ -114,11 +119,9 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
 			continue
 		}
-		// Skip services managed by other LB controllers
 		if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != "helios-lb" {
 			continue
 		}
-		// Skip services outside allowed namespaces (if selector is configured)
 		if len(nsAllowed) > 0 && !nsAllowed[svc.Namespace] {
 			continue
 		}
@@ -126,16 +129,18 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	services.Items = lbServices
 
+	logger.V(1).Info("discovered eligible services", LogKeyServiceCount, len(lbServices))
+
 	// Process each LoadBalancer service
 	for _, svc := range services.Items {
+		svcLogger := logger.WithValues(LogKeyService, svc.Name, LogKeyNamespace, svc.Namespace)
+
 		// Skip services that already have an ingress IP assigned
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			continue
 		}
 
-		// Determine if this service should be managed by this HeliosConfig:
-		// - If loadBalancerIP is set, it must fall within this config's IP range
-		// - If loadBalancerIP is not set, the service is eligible for auto-allocation
+		// Determine if this service should be managed by this HeliosConfig
 		if svc.Spec.LoadBalancerIP != "" && !network.IPInRange(svc.Spec.LoadBalancerIP, heliosConfig.Spec.IPRange) {
 			continue
 		}
@@ -143,27 +148,30 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Check MaxAllocations quota
 		if heliosConfig.Spec.MaxAllocations > 0 &&
 			int32(len(heliosConfig.Status.AllocatedIPs)) >= heliosConfig.Spec.MaxAllocations {
-			log.Info("max allocations reached", "max", heliosConfig.Spec.MaxAllocations,
-				"current", len(heliosConfig.Status.AllocatedIPs))
+			svcLogger.Info("max allocations reached, skipping remaining services",
+				LogKeyMaxAlloc, heliosConfig.Spec.MaxAllocations,
+				LogKeyCurrentAlloc, len(heliosConfig.Status.AllocatedIPs))
 			break
 		}
 
 		// Allocate IP
 		ip, err := r.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
 		if err != nil {
-			log.Error(err, "failed to allocate IP", "service", svc.Name)
+			svcLogger.Error(err, "failed to allocate IP")
 			heliosConfig.Status.Phase = balancerv1.StateFailed
 			heliosConfig.Status.State = balancerv1.StateFailed
 			heliosConfig.Status.Message = err.Error()
 			if statusErr := r.Status().Update(ctx, &heliosConfig); statusErr != nil {
-				log.Error(statusErr, "failed to update status")
+				svcLogger.Error(statusErr, "failed to update status after allocation failure")
 			}
 			return ctrl.Result{}, err
 		}
 
+		svcLogger = svcLogger.WithValues(LogKeyIP, ip)
+		svcLogger.Info("IP allocated for service")
+
 		// Retry on conflict for service update
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			// Get the latest service state
 			var currentSvc corev1.Service
 			if err := r.Get(ctx, types.NamespacedName{
 				Namespace: svc.Namespace,
@@ -172,28 +180,21 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return err
 			}
 
-			// Add annotation
 			if currentSvc.Annotations == nil {
 				currentSvc.Annotations = make(map[string]string)
 			}
 			currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
-
-			// Set loadBalancerClass in spec
 			currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
-
-			// Update status with allocated IP
 			currentSvc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
 				{IP: ip},
 			}
 
-			// Update service spec
 			if err := r.Status().Update(ctx, &currentSvc); err != nil {
 				return err
 			}
-
 			return r.Update(ctx, &currentSvc)
 		}); err != nil {
-			log.Error(err, "failed to update service")
+			svcLogger.Error(err, "failed to update service with allocated IP")
 			continue
 		}
 
@@ -206,11 +207,10 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		heliosConfig.Status.State = balancerv1.StateActive
 		heliosConfig.Status.Message = "IP allocated successfully"
 		if err := r.Status().Update(ctx, &heliosConfig); err != nil {
-			log.Error(err, "failed to update HeliosConfig status")
+			svcLogger.Error(err, "failed to update HeliosConfig status")
 			return ctrl.Result{}, err
 		}
 
-		// Record metrics
 		r.Metrics.RecordIPAllocation(ip, true)
 	}
 
@@ -220,16 +220,19 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 // handleDeletion handles the deletion of a HeliosConfig
 func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfig *balancerv1.HeliosConfig) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues(
+		LogKeyConfig, heliosConfig.Name,
+		LogKeyNamespace, heliosConfig.Namespace,
+	)
 
 	if controllerutil.ContainsFinalizer(heliosConfig, heliosConfigFinalizer) {
-		// Release all allocated IPs and clear service ingress
+		logger.Info("cleaning up allocated IPs", LogKeyAllocatedIPs, len(heliosConfig.Status.AllocatedIPs))
+
 		for serviceName, ip := range heliosConfig.Status.AllocatedIPs {
 			r.NetworkMgr.ReleaseIP(ip)
 			r.Metrics.RecordIPAllocation(ip, false)
-			log.Info("released IP", "service", serviceName, "ip", ip)
+			logger.Info("released IP", LogKeyService, serviceName, LogKeyIP, ip)
 
-			// Clear the service's LoadBalancer ingress status
 			var svc corev1.Service
 			if err := r.Get(ctx, types.NamespacedName{
 				Name:      serviceName,
@@ -237,17 +240,18 @@ func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfi
 			}, &svc); err == nil {
 				svc.Status.LoadBalancer.Ingress = nil
 				if err := r.Status().Update(ctx, &svc); err != nil {
-					log.Error(err, "failed to clear service ingress", "service", serviceName)
+					logger.Error(err, "failed to clear service ingress",
+						LogKeyService, serviceName)
 				}
 			}
 		}
 
-		// Remove finalizer
 		controllerutil.RemoveFinalizer(heliosConfig, heliosConfigFinalizer)
 		if err := r.Update(ctx, heliosConfig); err != nil {
-			log.Error(err, "failed to remove finalizer")
+			logger.Error(err, "failed to remove finalizer")
 			return ctrl.Result{}, err
 		}
+		logger.Info("finalizer removed, deletion complete")
 	}
 
 	return ctrl.Result{}, nil
@@ -279,10 +283,13 @@ func (r *HeliosConfigReconciler) findLoadBalancerServices(ctx context.Context, o
 		return nil
 	}
 
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues(
+		LogKeyService, svc.Name,
+		LogKeyNamespace, svc.Namespace,
+	)
 	var heliosConfigs balancerv1.HeliosConfigList
 	if err := r.List(ctx, &heliosConfigs); err != nil {
-		log.Error(err, "failed to list HeliosConfigs in service watch handler")
+		logger.Error(err, "failed to list HeliosConfigs in service watch handler")
 		return nil
 	}
 
