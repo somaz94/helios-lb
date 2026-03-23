@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-03-23)
+## [v0.3.0](https://github.com/somaz94/helios-lb/compare/v0.2.6...v0.3.0) (2026-03-23)
 
 ### Features
 
@@ -53,6 +53,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores
 
+- bump version to v0.3.0 ([9c2d9f4](https://github.com/somaz94/helios-lb/commit/9c2d9f4679d28efe3c922d83cbc370bbdd42fff7))
 - **deps:** bump the go-minor group with 3 updates (#37) ([#37](https://github.com/somaz94/helios-lb/pull/37)) ([e242aea](https://github.com/somaz94/helios-lb/commit/e242aea4cc67d6a1f55f2221c6f0aa2ae1d8e9af))
 - add workflow Makefile targets (check-gh, branch, pr) ([07f47f6](https://github.com/somaz94/helios-lb/commit/07f47f626cd29e858a8c614aa73e4bd2f82dfb46))
 - add build-time version injection and OCI labels to Dockerfile ([b777a6a](https://github.com/somaz94/helios-lb/commit/b777a6a96dd219f681d0b5dfd9cda8902190b38c))
