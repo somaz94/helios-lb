@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (2026-03-30)
+
+### Documentation
+
+- remove duplicate rules covered by global CLAUDE.md ([d1a4abe](https://github.com/somaz94/helios-lb/commit/d1a4abe841c87e0db0be968f41cc5881025ca86a))
+
+### Continuous Integration
+
+- skip auto-generated changelog and contributors commits in release notes ([6e54b07](https://github.com/somaz94/helios-lb/commit/6e54b07546edaf5e80d3c775e6546dbc2271fc92))
+- revert to body_path RELEASE.md in release workflow ([a0e77aa](https://github.com/somaz94/helios-lb/commit/a0e77aa512474b6c28cb693d62b4e4b25f2584f6))
+- use generate_release_notes instead of RELEASE.md ([f45b8b9](https://github.com/somaz94/helios-lb/commit/f45b8b9ba7653ae6d07b469bc141f0effc87b13f))
+
+### Chores
+
+- **deps:** bump azure/setup-helm from 4 to 5 ([9c69f72](https://github.com/somaz94/helios-lb/commit/9c69f7292a2b3ad722620118ce718a019d40d098))
+- remove duplicate rules from CLAUDE.md (moved to global) ([7ac3122](https://github.com/somaz94/helios-lb/commit/7ac3122430c0e431cc1a984a8fbc883830278535))
+- add git config protection to CLAUDE.md ([297480b](https://github.com/somaz94/helios-lb/commit/297480ba31fe1a8f3d8d2274555476c0b7b4d91a))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.4.0](https://github.com/somaz94/helios-lb/compare/v0.3.0...v0.4.0) (2026-03-23)
 
 ### Features
