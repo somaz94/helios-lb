@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-03-30)
+## [v0.5.0](https://github.com/somaz94/helios-lb/compare/v0.4.0...v0.5.0) (2026-04-01)
+
+### Code Refactoring
+
+- deduplicate IP parsing, add IPv6 webhook validation, bump v0.5.0 ([6d94871](https://github.com/somaz94/helios-lb/commit/6d948710f3232a45f59309b20f2d39a14f82e493))
 
 ### Documentation
 
