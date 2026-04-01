@@ -103,8 +103,8 @@ func (m *IPManager) assignIPToService(ctx context.Context, svc *corev1.Service, 
 		if currentSvc.Annotations == nil {
 			currentSvc.Annotations = make(map[string]string)
 		}
-		currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = "helios-lb"
-		currentSvc.Spec.LoadBalancerClass = pointer.String("helios-lb")
+		currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = balancerv1.LoadBalancerClassHelios
+		currentSvc.Spec.LoadBalancerClass = pointer.String(balancerv1.LoadBalancerClassHelios)
 
 		ingress := []corev1.LoadBalancerIngress{{IP: ip}}
 		if ipv6 != "" {

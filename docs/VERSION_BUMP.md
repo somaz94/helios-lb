@@ -8,12 +8,12 @@ When releasing a new version, update the following files:
 
 | File | Field | Example |
 |------|-------|---------|
-| `Makefile` | `IMG ?= somaz940/helios-lb:<version>` | `v0.4.0` |
-| `helm/helios-lb/Chart.yaml` | `version` (chart version, without `v` prefix) | `0.4.0` |
-| `helm/helios-lb/Chart.yaml` | `appVersion` (app version, with `v` prefix) | `"v0.4.0"` |
-| `helm/helios-lb/values.yaml` | `image.tag` | `v0.4.0` |
-| `config/manager/kustomization.yaml` | `newTag` | `v0.4.0` |
-| `release/install.yaml` | `image:` (rebuild with `make build-installer`) | `v0.4.0` |
+| `Makefile` | `IMG ?= somaz940/helios-lb:<version>` | `v0.5.0` |
+| `helm/helios-lb/Chart.yaml` | `version` (chart version, without `v` prefix) | `0.5.0` |
+| `helm/helios-lb/Chart.yaml` | `appVersion` (app version, with `v` prefix) | `"v0.5.0"` |
+| `helm/helios-lb/values.yaml` | `image.tag` | `v0.5.0` |
+| `config/manager/kustomization.yaml` | `newTag` | `v0.5.0` |
+| `release/install.yaml` | `image:` (rebuild with `make build-installer`) | `v0.5.0` |
 
 <br/>
 

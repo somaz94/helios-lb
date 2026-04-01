@@ -161,6 +161,9 @@ type HeliosConfigStatus struct {
 
 // HeliosConfig Constants
 const (
+	// LoadBalancerClassHelios is the load balancer class name for Helios LB.
+	LoadBalancerClassHelios = "helios-lb"
+
 	// State constants
 	StatePending = "Pending"
 	StateActive  = "Active"

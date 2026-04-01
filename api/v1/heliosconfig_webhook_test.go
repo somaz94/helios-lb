@@ -5,6 +5,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/somaz94/helios-lb/internal/network"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -132,11 +134,11 @@ func TestCompareIPs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := normalizeIPForValidation(parseTestIP(t, tt.a))
-			b := normalizeIPForValidation(parseTestIP(t, tt.b))
-			got := compareIPs(a, b)
+			a := network.NormalizeIP(parseTestIP(t, tt.a))
+			b := network.NormalizeIP(parseTestIP(t, tt.b))
+			got := network.CompareIPs(a, b)
 			if got != tt.want {
-				t.Errorf("compareIPs(%s, %s) = %d, want %d", tt.a, tt.b, got, tt.want)
+				t.Errorf("CompareIPs(%s, %s) = %d, want %d", tt.a, tt.b, got, tt.want)
 			}
 		})
 	}
@@ -219,6 +221,48 @@ func TestValidateCreate(t *testing.T) {
 			t.Error("expected error for HTTP without path")
 		}
 	})
+
+	t.Run("valid config with ipv6Range", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.0.0.1-10.0.0.10",
+				IPv6Range: "fd00::1-fd00::ff",
+			},
+		}
+		_, err := v.ValidateCreate(ctx, hc)
+		if err != nil {
+			t.Errorf("expected no error for valid dual-stack config, got %v", err)
+		}
+	})
+
+	t.Run("invalid ipv6Range", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.0.0.1",
+				IPv6Range: "not-an-ipv6",
+			},
+		}
+		_, err := v.ValidateCreate(ctx, hc)
+		if err == nil {
+			t.Error("expected error for invalid ipv6Range")
+		}
+	})
+
+	t.Run("empty ipv6Range is allowed", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.0.0.1",
+				IPv6Range: "",
+			},
+		}
+		_, err := v.ValidateCreate(ctx, hc)
+		if err != nil {
+			t.Errorf("expected no error for empty ipv6Range, got %v", err)
+		}
+	})
 }
 
 func TestValidateUpdate(t *testing.T) {
@@ -284,12 +328,12 @@ func TestParseRange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, e, err := parseRange(tt.input)
+			s, e, err := network.ParseIPRange(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseRange(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				t.Errorf("ParseIPRange(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 			}
 			if err == nil && (s == nil || e == nil) {
-				t.Errorf("parseRange(%q) returned nil IPs without error", tt.input)
+				t.Errorf("ParseIPRange(%q) returned nil IPs without error", tt.input)
 			}
 		})
 	}

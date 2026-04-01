@@ -1,6 +1,7 @@
 package controller
 
 import (
+	v1 "github.com/somaz94/helios-lb/api/v1"
 	"github.com/somaz94/helios-lb/internal/network"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -18,7 +19,7 @@ func FilterEligibleServices(services []corev1.Service, namespaceSelector []strin
 		if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
 			continue
 		}
-		if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != "helios-lb" {
+		if svc.Spec.LoadBalancerClass != nil && *svc.Spec.LoadBalancerClass != v1.LoadBalancerClassHelios {
 			continue
 		}
 		if len(nsAllowed) > 0 && !nsAllowed[svc.Namespace] {

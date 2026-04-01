@@ -22,6 +22,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/somaz94/helios-lb/internal/network"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,7 +54,12 @@ func (v *HeliosConfigValidator) ValidateCreate(ctx context.Context, hc *HeliosCo
 	helioslog.Info("validate create", "name", hc.Name)
 
 	if err := validateIPRange(hc.Spec.IPRange); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ipRange: %w", err)
+	}
+	if hc.Spec.IPv6Range != "" {
+		if err := validateIPRange(hc.Spec.IPv6Range); err != nil {
+			return nil, fmt.Errorf("ipv6Range: %w", err)
+		}
 	}
 	if err := validatePorts(hc.Spec.Ports); err != nil {
 		return nil, err
@@ -79,7 +86,12 @@ func (v *HeliosConfigValidator) ValidateUpdate(ctx context.Context, _ *HeliosCon
 	helioslog.Info("validate update", "name", hc.Name)
 
 	if err := validateIPRange(hc.Spec.IPRange); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ipRange: %w", err)
+	}
+	if hc.Spec.IPv6Range != "" {
+		if err := validateIPRange(hc.Spec.IPv6Range); err != nil {
+			return nil, fmt.Errorf("ipv6Range: %w", err)
+		}
 	}
 	if err := validatePorts(hc.Spec.Ports); err != nil {
 		return nil, err
@@ -145,8 +157,8 @@ func validateIPRange(ipRange string) error {
 	}
 
 	// Ensure start <= end
-	startNorm := normalizeIPForValidation(startIP)
-	endNorm := normalizeIPForValidation(endIP)
+	startNorm := network.NormalizeIP(startIP)
+	endNorm := network.NormalizeIP(endIP)
 	if len(startNorm) != len(endNorm) {
 		return fmt.Errorf("mixed IPv4/IPv6 in range %q", ipRange)
 	}
@@ -160,14 +172,6 @@ func validateIPRange(ipRange string) error {
 	}
 
 	return nil
-}
-
-// normalizeIPForValidation returns consistent IP representation for comparison.
-func normalizeIPForValidation(ip net.IP) net.IP {
-	if v4 := ip.To4(); v4 != nil {
-		return v4
-	}
-	return ip.To16()
 }
 
 // validatePorts validates port configurations.
@@ -234,7 +238,7 @@ func (v *HeliosConfigValidator) checkIPRangeOverlap(ctx context.Context, hc *Hel
 		return nil
 	}
 
-	newStart, newEnd, err := parseRange(hc.Spec.IPRange)
+	newStart, newEnd, err := network.ParseIPRange(hc.Spec.IPRange)
 	if err != nil {
 		return nil // already validated
 	}
@@ -243,71 +247,15 @@ func (v *HeliosConfigValidator) checkIPRangeOverlap(ctx context.Context, hc *Hel
 		if existing.Name == excludeName {
 			continue
 		}
-		existStart, existEnd, err := parseRange(existing.Spec.IPRange)
+		existStart, existEnd, err := network.ParseIPRange(existing.Spec.IPRange)
 		if err != nil {
 			continue
 		}
 		// Check overlap: ranges overlap if newStart <= existEnd && newEnd >= existStart
-		if compareIPs(newStart, existEnd) <= 0 && compareIPs(newEnd, existStart) >= 0 {
+		if network.CompareIPs(newStart, existEnd) <= 0 && network.CompareIPs(newEnd, existStart) >= 0 {
 			return fmt.Errorf("IP range %q overlaps with existing HeliosConfig %q (range: %s)",
 				hc.Spec.IPRange, existing.Name, existing.Spec.IPRange)
 		}
 	}
 	return nil
-}
-
-// parseRange parses an IP range string and returns normalized start/end IPs.
-func parseRange(ipRange string) (start, end net.IP, err error) {
-	trimmed := strings.TrimSpace(ipRange)
-
-	if strings.Contains(trimmed, "/") {
-		_, ipNet, err := net.ParseCIDR(trimmed)
-		if err != nil {
-			return nil, nil, err
-		}
-		s := normalizeIPForValidation(ipNet.IP)
-		e := make(net.IP, len(s))
-		for i := range s {
-			e[i] = s[i] | ^ipNet.Mask[i]
-		}
-		return s, e, nil
-	}
-
-	if ip := net.ParseIP(trimmed); ip != nil {
-		n := normalizeIPForValidation(ip)
-		return n, n, nil
-	}
-
-	parts := strings.Split(trimmed, "-")
-	if len(parts) != 2 {
-		return nil, nil, fmt.Errorf("invalid range: %s", ipRange)
-	}
-
-	s := net.ParseIP(strings.TrimSpace(parts[0]))
-	e := net.ParseIP(strings.TrimSpace(parts[1]))
-	if s == nil || e == nil {
-		return nil, nil, fmt.Errorf("invalid IPs in range: %s", ipRange)
-	}
-	return normalizeIPForValidation(s), normalizeIPForValidation(e), nil
-}
-
-// compareIPs compares two IPs byte-by-byte. Returns -1, 0, or 1.
-func compareIPs(a, b net.IP) int {
-	a = normalizeIPForValidation(a)
-	b = normalizeIPForValidation(b)
-	if len(a) != len(b) {
-		if len(a) < len(b) {
-			return -1
-		}
-		return 1
-	}
-	for i := range a {
-		if a[i] < b[i] {
-			return -1
-		}
-		if a[i] > b[i] {
-			return 1
-		}
-	}
-	return 0
 }

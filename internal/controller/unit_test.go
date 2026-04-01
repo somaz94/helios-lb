@@ -887,7 +887,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 
 func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 	scheme := newTestScheme()
-	heliosClass := "helios-lb"
+	heliosClass := balancerv1.LoadBalancerClassHelios
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "test-helios",

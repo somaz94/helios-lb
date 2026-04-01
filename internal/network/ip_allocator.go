@@ -21,111 +21,9 @@ func NewIPAllocator() *IPAllocator {
 	}
 }
 
-// normalizeIP returns a consistent representation of an IP address.
-// IPv4 addresses are returned as 4-byte slices, IPv6 as 16-byte slices.
-// This ensures bytes.Compare works correctly across all IP comparisons.
-func normalizeIP(ip net.IP) net.IP {
-	if v4 := ip.To4(); v4 != nil {
-		return v4
-	}
-	return ip.To16()
-}
-
-// parseIPRange parses IP range string in the following formats:
-//   - Single IP: "192.168.1.100" or "fd00::1"
-//   - Range: "192.168.1.100-192.168.1.110" or "fd00::1-fd00::ff"
-//   - CIDR: "192.168.1.0/24" or "fd00::/120"
-//
-// Supports both IPv4 and IPv6 addresses.
-// Returns start and end IPs without modifying shared state.
-func parseIPRange(ipRange string) (start, end net.IP, err error) {
-	trimmed := strings.TrimSpace(ipRange)
-
-	// Try CIDR notation (e.g., "192.168.1.0/24" or "fd00::/120")
-	if strings.Contains(trimmed, "/") {
-		_, ipNet, err := net.ParseCIDR(trimmed)
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid CIDR format: %s", ipRange)
-		}
-		start := normalizeIP(ipNet.IP)
-		// Calculate the last IP in the CIDR range
-		end := make(net.IP, len(start))
-		for i := range start {
-			end[i] = start[i] | ^ipNet.Mask[i]
-		}
-		// Skip network address (first) and broadcast address (last) for IPv4 subnets > /31
-		ones, bits := ipNet.Mask.Size()
-		if bits == 32 && bits-ones > 1 {
-			start = incrementIP(start)
-			end = decrementIP(end)
-		}
-		return start, end, nil
-	}
-
-	// Try single IP
-	if ip := net.ParseIP(trimmed); ip != nil {
-		normalized := normalizeIP(ip)
-		return normalized, normalized, nil
-	}
-
-	// Try parsing IP range (e.g., "192.168.1.100-192.168.1.110" or "fd00::1-fd00::ff")
-	parts := strings.Split(trimmed, "-")
-	if len(parts) != 2 {
-		return nil, nil, fmt.Errorf("invalid IP range format: %s", ipRange)
-	}
-
-	start = net.ParseIP(strings.TrimSpace(parts[0]))
-	end = net.ParseIP(strings.TrimSpace(parts[1]))
-
-	if start == nil || end == nil {
-		return nil, nil, fmt.Errorf("invalid IP addresses in range: %s", ipRange)
-	}
-
-	return normalizeIP(start), normalizeIP(end), nil
-}
-
-// incrementIP returns the next IP address (network helper for CIDR)
-func incrementIP(ip net.IP) net.IP {
-	next := make(net.IP, len(ip))
-	copy(next, ip)
-	for i := len(next) - 1; i >= 0; i-- {
-		next[i]++
-		if next[i] != 0 {
-			break
-		}
-	}
-	return next
-}
-
-// decrementIP returns the previous IP address (network helper for CIDR)
-func decrementIP(ip net.IP) net.IP {
-	prev := make(net.IP, len(ip))
-	copy(prev, ip)
-	for i := len(prev) - 1; i >= 0; i-- {
-		prev[i]--
-		if prev[i] != 0xFF {
-			break
-		}
-	}
-	return prev
-}
-
-// nextIP returns the next IP address
-func (a *IPAllocator) nextIP(ip net.IP) net.IP {
-	next := make(net.IP, len(ip))
-	copy(next, ip)
-	for i := len(next) - 1; i >= 0; i-- {
-		next[i]++
-		if next[i] != 0 {
-			break
-		}
-	}
-	return next
-}
-
 // AllocateIP allocates an available IP from the range
 func (a *IPAllocator) AllocateIP(ipRange string) (string, error) {
-	start, end, err := parseIPRange(ipRange)
+	start, end, err := ParseIPRange(ipRange)
 	if err != nil {
 		return "", err
 	}
@@ -142,7 +40,7 @@ func (a *IPAllocator) AllocateIP(ipRange string) (string, error) {
 	}
 
 	// Allocate IP from the range using bytes comparison instead of string comparison
-	for ip := start; bytes.Compare(ip, end) <= 0; ip = a.nextIP(ip) {
+	for ip := start; bytes.Compare(ip, end) <= 0; ip = IncrementIP(ip) {
 		ipStr := ip.String()
 		if !a.used[ipStr] {
 			a.used[ipStr] = true
@@ -170,11 +68,11 @@ func IPInRange(ip string, ipRange string) bool {
 		return ipNet.Contains(target)
 	}
 
-	start, end, err := parseIPRange(ipRange)
+	start, end, err := ParseIPRange(ipRange)
 	if err != nil {
 		return false
 	}
-	normalized := normalizeIP(target)
+	normalized := NormalizeIP(target)
 	return bytes.Compare(normalized, start) >= 0 && bytes.Compare(normalized, end) <= 0
 }
 

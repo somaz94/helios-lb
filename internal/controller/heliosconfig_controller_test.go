@@ -221,7 +221,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: namespace}, &svc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(svc.Annotations).To(HaveKey("balancer.helios.dev/load-balancer-class"))
-		Expect(svc.Annotations["balancer.helios.dev/load-balancer-class"]).To(Equal("helios-lb"))
+		Expect(svc.Annotations["balancer.helios.dev/load-balancer-class"]).To(Equal(balancerv1.LoadBalancerClassHelios))
 	})
 
 	It("should not add helios-lb annotation to service with different IP", func() {
@@ -402,7 +402,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 				return false
 			}
 			return len(svc.Status.LoadBalancer.Ingress) > 0 &&
-				svc.Annotations["balancer.helios.dev/load-balancer-class"] == "helios-lb"
+				svc.Annotations["balancer.helios.dev/load-balancer-class"] == balancerv1.LoadBalancerClassHelios
 		}, time.Second*10, time.Second).Should(BeTrue())
 	})
 
