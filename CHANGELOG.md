@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (2026-04-13)
+
+### Chores
+
+- **deps:** bump dependabot/fetch-metadata from 2 to 3 ([43ed8c9](https://github.com/somaz94/helios-lb/commit/43ed8c90e9aa02922d7db6823cd1bad21d1d6f20))
+
+<br/>
+
 ## [v0.5.0](https://github.com/somaz94/helios-lb/compare/v0.4.0...v0.5.0) (2026-04-01)
 
 ### Code Refactoring
