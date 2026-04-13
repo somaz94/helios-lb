@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores
 
+- **deps:** bump actions/github-script from 8 to 9 ([52afd21](https://github.com/somaz94/helios-lb/commit/52afd21476ac3c6c4b60be9f728a5eee36afc2d1))
 - **deps:** bump dependabot/fetch-metadata from 2 to 3 ([43ed8c9](https://github.com/somaz94/helios-lb/commit/43ed8c90e9aa02922d7db6823cd1bad21d1d6f20))
 
 <br/>
