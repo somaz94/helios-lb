@@ -120,6 +120,17 @@ This way, you can leverage both load balancers in your cluster, each managing it
 
 ### Option 1: Helm (Recommended)
 
+**Recommended: OCI registry (Helm 3.8+)**
+
+```bash
+# Single-command install — no helm repo add needed
+helm install helios-lb oci://ghcr.io/somaz94/charts/helios-lb \
+  --version 0.5.0 \
+  --namespace helios-lb-system --create-namespace
+```
+
+**Alternative: classic Helm repo**
+
 ```bash
 # Add the Helm repository
 helm repo add helios-lb https://somaz94.github.io/helios-lb/helm-repo
