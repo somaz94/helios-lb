@@ -29,5 +29,17 @@ updates:
         update-types:
           - minor
           - patch
+    # Pin k8s.io/* to the minor that controller-runtime supports.
+    # Newer client-go adds methods to ResourceEventHandlerRegistration that
+    # controller-runtime's handlerRegistration does not yet implement, breaking
+    # the build (see PR #50). Drop these ignores once controller-runtime
+    # publishes a release that tracks the next k8s minor.
+    ignore:
+      - dependency-name: "k8s.io/api"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "k8s.io/apimachinery"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "k8s.io/client-go"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
 
 
