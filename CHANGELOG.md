@@ -2,13 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-04-13)
+## Unreleased (2026-04-27)
+
+### Features
+
+- **ci:** publish Helm chart to GHCR (OCI) alongside gh-pages ([1a6f008](https://github.com/somaz94/helios-lb/commit/1a6f008a2422da3354cfc27ecc4959724c3c3c34))
+
+### Bug Fixes
+
+- **ci:** use staged tarball for OCI push (gh-pages branch checkout invalidates ./helm/ path) ([8872c92](https://github.com/somaz94/helios-lb/commit/8872c92ec50bf8182546865ebe360c5dd481e3bd))
+
+### Continuous Integration
+
+- use kind-e2e-test-action@v1 (replace inline e2e script) ([34de8fb](https://github.com/somaz94/helios-lb/commit/34de8fb1e6e5aea745d3bffac9669910bcd5c6de))
+- use go-kubebuilder-test-action@v1 (replace inline test script) ([81e983d](https://github.com/somaz94/helios-lb/commit/81e983dd27884abedbf73ccd77f716a3df9adeff))
+- use helm-chart-release-action@v1 (replace inline release script) ([e6d953d](https://github.com/somaz94/helios-lb/commit/e6d953d9a2948143cc69a2f25b1dffeaffb0da51))
+- add docker build job and bump action versions in release workflow ([92e0722](https://github.com/somaz94/helios-lb/commit/92e0722c31fe86d19c56301aae800d88eba34c38))
 
 ### Chores
 
+- **deps:** bump docker/login-action from 3 to 4 ([b5fb570](https://github.com/somaz94/helios-lb/commit/b5fb570a9372213864428a72534dd183aa3e01e0))
+- **deps:** bump the go-minor group with 4 updates (#50) ([#50](https://github.com/somaz94/helios-lb/pull/50)) ([b59e14d](https://github.com/somaz94/helios-lb/commit/b59e14dac17a7aa6811c5d22dcabff8425fcb7a7))
+- **deps:** bump the go-minor group with 3 updates (#49) ([#49](https://github.com/somaz94/helios-lb/pull/49)) ([8999b41](https://github.com/somaz94/helios-lb/commit/8999b411351306a43f17d06447108f3ede3af1aa))
 - **deps:** bump softprops/action-gh-release from 2 to 3 ([5ed6ed7](https://github.com/somaz94/helios-lb/commit/5ed6ed78bda52da5db02e6451d4e853c69eda570))
 - **deps:** bump actions/github-script from 8 to 9 ([52afd21](https://github.com/somaz94/helios-lb/commit/52afd21476ac3c6c4b60be9f728a5eee36afc2d1))
 - **deps:** bump dependabot/fetch-metadata from 2 to 3 ([43ed8c9](https://github.com/somaz94/helios-lb/commit/43ed8c90e9aa02922d7db6823cd1bad21d1d6f20))
+
+### Contributors
+
+- somaz
 
 <br/>
 
