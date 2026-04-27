@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 
 ### Chores
 
+- **deps:** bump docker/setup-qemu-action from 3 to 4 ([f7cf812](https://github.com/somaz94/helios-lb/commit/f7cf8124a793e72f285564d4aa088da8b7cd212f))
 - **deps:** bump docker/login-action from 3 to 4 ([b5fb570](https://github.com/somaz94/helios-lb/commit/b5fb570a9372213864428a72534dd183aa3e01e0))
 - **deps:** bump the go-minor group with 4 updates (#50) ([#50](https://github.com/somaz94/helios-lb/pull/50)) ([b59e14d](https://github.com/somaz94/helios-lb/commit/b59e14dac17a7aa6811c5d22dcabff8425fcb7a7))
 - **deps:** bump the go-minor group with 3 updates (#49) ([#49](https://github.com/somaz94/helios-lb/pull/49)) ([8999b41](https://github.com/somaz94/helios-lb/commit/8999b411351306a43f17d06447108f3ede3af1aa))
