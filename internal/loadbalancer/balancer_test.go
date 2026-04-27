@@ -160,7 +160,9 @@ func testRandomSelection(t *testing.T) {
 	balancer.AddBackend(backend2)
 
 	selections := make(map[string]int)
-	iterations := 100
+	// 10k samples keeps the [0.4, 0.6] bound ~20 stddev away from a fair 50/50,
+	// so this no longer fails ~5% of runs the way 100 samples did.
+	iterations := 10000
 
 	for i := 0; i < iterations; i++ {
 		backend := balancer.NextBackend("test-service", "")
