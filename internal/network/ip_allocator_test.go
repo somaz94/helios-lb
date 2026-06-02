@@ -52,7 +52,7 @@ func TestIPAllocator(t *testing.T) {
 			t.Errorf("Expected IP 192.168.1.1, got %s", ip1)
 		}
 
-		// 같은 IP를 다시 할당받을 수 있어야 함
+		// Re-allocating the same single-IP range should return the same IP.
 		ip2, err := allocator.AllocateIP("192.168.1.1-192.168.1.1")
 		if err != nil {
 			t.Fatalf("Failed to reallocate same IP: %v", err)

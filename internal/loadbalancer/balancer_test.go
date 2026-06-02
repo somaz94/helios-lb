@@ -260,7 +260,7 @@ func TestLoadBalancerOperations(t *testing.T) {
 		backend.SetHealthy(true)
 		lb.AddBackend(backend)
 
-		// 짧은 시간 대기 후 중지
+		// Wait briefly, then stop.
 		time.Sleep(time.Millisecond * 200)
 		lb.Stop()
 
