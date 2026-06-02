@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.3](https://github.com/somaz94/helios-lb/compare/v0.6.2...v0.6.3) (2026-06-02)
+
+### Bug Fixes
+
+- **network:** cap AllocateIP scan to prevent unbounded lock-held loop on large ranges ([59dabf5](https://github.com/somaz94/helios-lb/commit/59dabf507418b3b6690db70ef70f5e426a15306d))
+
+### Chores
+
+- bump version to v0.6.3 ([4f1bdd6](https://github.com/somaz94/helios-lb/commit/4f1bdd6b4d6042e550e22b9ee3220843d23bc70f))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.6.2](https://github.com/somaz94/helios-lb/compare/v0.6.1...v0.6.2) (2026-06-02)
 
 ### Bug Fixes
