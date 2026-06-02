@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.1](https://github.com/somaz94/helios-lb/compare/v0.6.0...v0.6.1) (2026-06-02)
+
+### Bug Fixes
+
+- **controller:** detect wrapped retryable/permanent errors via errors.As ([460219f](https://github.com/somaz94/helios-lb/commit/460219f0fe05a6903362e25b12565e783b921933))
+
+### Chores
+
+- bump version to v0.6.1 ([224f79f](https://github.com/somaz94/helios-lb/commit/224f79f9f77db1ca8285a6c72437b28114bbfcc5))
+- convert remaining Korean test comments to English ([23ac866](https://github.com/somaz94/helios-lb/commit/23ac866dc4478065ab842df099d15e22b479dbe7))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.6.0](https://github.com/somaz94/helios-lb/compare/v0.5.0...v0.6.0) (2026-06-02)
 
 ### Features
