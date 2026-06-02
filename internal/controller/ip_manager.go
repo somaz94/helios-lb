@@ -112,6 +112,10 @@ func (m *IPManager) assignIPToService(ctx context.Context, svc *corev1.Service, 
 		}
 		currentSvc.Status.LoadBalancer.Ingress = ingress
 
+		// Status().Update must precede the spec Update: the status subresource update
+		// refreshes currentSvc with the server's stored spec, so the following spec Update
+		// does not try to re-set the immutable spec.loadBalancerClass field (the apiserver
+		// rejects any change once it is set). Do not reorder these two calls.
 		if err := m.Client.Status().Update(ctx, &currentSvc); err != nil {
 			return err
 		}

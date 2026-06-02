@@ -522,6 +522,64 @@ func TestCheckIPRangeOverlap(t *testing.T) {
 	})
 }
 
+func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
+	scheme := newTestScheme()
+
+	existing := &HeliosConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "existing-v6", Namespace: "default"},
+		Spec: HeliosConfigSpec{
+			IPRange:   "10.1.0.1-10.1.0.10",
+			IPv6Range: "fd00::1-fd00::ff",
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
+	v := &HeliosConfigValidator{Client: cl}
+	ctx := context.Background()
+
+	t.Run("overlapping IPv6 range rejected despite disjoint IPv4", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.2.0.1-10.2.0.10", // disjoint IPv4
+				IPv6Range: "fd00::80-fd00::1ff", // overlaps existing IPv6
+			},
+		}
+		_, err := v.ValidateCreate(ctx, hc)
+		if err == nil {
+			t.Error("expected IPv6 overlap error")
+		}
+	})
+
+	t.Run("non-overlapping IPv6 range accepted", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.2.0.1-10.2.0.10",
+				IPv6Range: "fd00::1:0-fd00::1:ff", // disjoint from fd00::1-fd00::ff
+			},
+		}
+		_, err := v.ValidateCreate(ctx, hc)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("IPv6 overlap excludes self on update", func(t *testing.T) {
+		hc := &HeliosConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "existing-v6"},
+			Spec: HeliosConfigSpec{
+				IPRange:   "10.1.0.1-10.1.0.10",
+				IPv6Range: "fd00::1-fd00::ff",
+			},
+		}
+		_, err := v.ValidateUpdate(ctx, existing, hc)
+		if err != nil {
+			t.Errorf("expected no error for self-update, got %v", err)
+		}
+	})
+}
+
 func TestDeepCopy_EmptyStatus(t *testing.T) {
 	// Test status with nil AllocatedIPs and nil Conditions
 	hc := &HeliosConfig{

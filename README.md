@@ -345,7 +345,7 @@ The controller emits the following events on HeliosConfig resources:
 
 ### Validating Webhook
 
-Helios-LB includes a validating webhook that checks IP range format, port validity, weight configuration, and IP range overlap between HeliosConfig resources.
+Helios-LB includes a validating webhook that checks IP range format, port validity, weight configuration, and IP range overlap (both IPv4 and IPv6 ranges) between HeliosConfig resources.
 
 The webhook is **disabled by default** and can be enabled in three ways:
 

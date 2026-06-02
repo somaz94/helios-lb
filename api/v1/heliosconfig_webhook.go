@@ -52,65 +52,40 @@ var _ admission.Validator[*HeliosConfig] = &HeliosConfigValidator{}
 // ValidateCreate validates a HeliosConfig on creation.
 func (v *HeliosConfigValidator) ValidateCreate(ctx context.Context, hc *HeliosConfig) (admission.Warnings, error) {
 	helioslog.Info("validate create", "name", hc.Name)
-
-	if err := validateIPRange(hc.Spec.IPRange); err != nil {
-		return nil, fmt.Errorf("ipRange: %w", err)
-	}
-	if hc.Spec.IPv6Range != "" {
-		if err := validateIPRange(hc.Spec.IPv6Range); err != nil {
-			return nil, fmt.Errorf("ipv6Range: %w", err)
-		}
-	}
-	if err := validatePorts(hc.Spec.Ports); err != nil {
-		return nil, err
-	}
-	if err := validateWeights(hc.Spec.Weights, hc.Spec.Method); err != nil {
-		return nil, err
-	}
-	if err := validateHealthCheck(hc.Spec.HealthCheck); err != nil {
-		return nil, err
-	}
-
-	// Check for IP range overlap with existing HeliosConfigs
-	if v.Client != nil {
-		if err := v.checkIPRangeOverlap(ctx, hc, ""); err != nil {
-			return nil, err
-		}
-	}
-
-	return nil, nil
+	return nil, v.validateSpec(ctx, hc, "")
 }
 
 // ValidateUpdate validates a HeliosConfig on update.
 func (v *HeliosConfigValidator) ValidateUpdate(ctx context.Context, _ *HeliosConfig, hc *HeliosConfig) (admission.Warnings, error) {
 	helioslog.Info("validate update", "name", hc.Name)
+	return nil, v.validateSpec(ctx, hc, hc.Name)
+}
 
+// validateSpec runs all field-level and cross-config validations for a HeliosConfig.
+// excludeName is the config to exclude from the overlap check (the config itself, on update).
+func (v *HeliosConfigValidator) validateSpec(ctx context.Context, hc *HeliosConfig, excludeName string) error {
 	if err := validateIPRange(hc.Spec.IPRange); err != nil {
-		return nil, fmt.Errorf("ipRange: %w", err)
+		return fmt.Errorf("ipRange: %w", err)
 	}
 	if hc.Spec.IPv6Range != "" {
 		if err := validateIPRange(hc.Spec.IPv6Range); err != nil {
-			return nil, fmt.Errorf("ipv6Range: %w", err)
+			return fmt.Errorf("ipv6Range: %w", err)
 		}
 	}
 	if err := validatePorts(hc.Spec.Ports); err != nil {
-		return nil, err
+		return err
 	}
 	if err := validateWeights(hc.Spec.Weights, hc.Spec.Method); err != nil {
-		return nil, err
+		return err
 	}
 	if err := validateHealthCheck(hc.Spec.HealthCheck); err != nil {
-		return nil, err
+		return err
 	}
-
-	// Check overlap excluding self
+	// Cross-config IP range overlap check; skipped when no client is wired (unit tests).
 	if v.Client != nil {
-		if err := v.checkIPRangeOverlap(ctx, hc, hc.Name); err != nil {
-			return nil, err
-		}
+		return v.checkIPRangeOverlap(ctx, hc, excludeName)
 	}
-
-	return nil, nil
+	return nil
 }
 
 // ValidateDelete validates a HeliosConfig on deletion.
@@ -162,17 +137,19 @@ func validateIPRange(ipRange string) error {
 	if len(startNorm) != len(endNorm) {
 		return fmt.Errorf("mixed IPv4/IPv6 in range %q", ipRange)
 	}
-	for i := range startNorm {
-		if startNorm[i] < endNorm[i] {
-			break
-		}
-		if startNorm[i] > endNorm[i] {
-			return fmt.Errorf("start IP is greater than end IP in range %q", ipRange)
-		}
+	if network.CompareIPs(startNorm, endNorm) > 0 {
+		return fmt.Errorf("start IP is greater than end IP in range %q", ipRange)
 	}
 
 	return nil
 }
+
+// The bound and enum checks in validatePorts, validateWeights, and validateHealthCheck
+// intentionally mirror the +kubebuilder:validation markers on the matching spec fields
+// (PortConfig.Port/Protocol, WeightConfig.Weight, HealthCheckConfig.Protocol) in
+// heliosconfig_types.go. The CRD schema is the primary admission gate; these webhook
+// checks are a defense-in-depth backstop and the path unit tests exercise directly.
+// Keep the two in lock-step: when a marker bound changes, update the matching check here.
 
 // validatePorts validates port configurations.
 func validatePorts(ports []PortConfig) error {
@@ -181,7 +158,9 @@ func validatePorts(ports []PortConfig) error {
 		if p.Port < 1 || p.Port > 65535 {
 			return fmt.Errorf("port %d out of valid range (1-65535)", p.Port)
 		}
-		if p.Protocol != "" && p.Protocol != "TCP" && p.Protocol != "UDP" {
+		switch p.Protocol {
+		case "", "TCP", "UDP":
+		default:
 			return fmt.Errorf("invalid protocol %q for port %d: must be TCP or UDP", p.Protocol, p.Port)
 		}
 		if seen[p.Port] {
@@ -218,7 +197,9 @@ func validateHealthCheck(hc *HealthCheckConfig) error {
 	if hc == nil {
 		return nil
 	}
-	if hc.Protocol != "" && hc.Protocol != "TCP" && hc.Protocol != "HTTP" {
+	switch hc.Protocol {
+	case "", "TCP", "HTTP":
+	default:
 		return fmt.Errorf("invalid health check protocol %q: must be TCP or HTTP", hc.Protocol)
 	}
 	if hc.Protocol == "HTTP" && hc.HTTPPath == "" {
@@ -227,34 +208,55 @@ func validateHealthCheck(hc *HealthCheckConfig) error {
 	return nil
 }
 
-// checkIPRangeOverlap checks if the new HeliosConfig's IP range overlaps
-// with any existing HeliosConfig. excludeName is the name of the config to
-// exclude from the check (used during updates).
+// checkIPRangeOverlap checks if the new HeliosConfig's IPv4 and IPv6 ranges overlap
+// with any existing HeliosConfig. excludeName is the name of the config to exclude
+// from the check (used during updates).
 func (v *HeliosConfigValidator) checkIPRangeOverlap(ctx context.Context, hc *HeliosConfig, excludeName string) error {
 	var list HeliosConfigList
 	if err := v.Client.List(ctx, &list); err != nil {
-		// If we can't list, log and skip overlap check rather than blocking
+		// If we can't list, log and skip overlap check rather than blocking.
 		helioslog.Error(err, "failed to list HeliosConfigs for overlap check")
 		return nil
 	}
 
-	newStart, newEnd, err := network.ParseIPRange(hc.Spec.IPRange)
-	if err != nil {
-		return nil // already validated
+	if err := overlapForRange(hc.Spec.IPRange, excludeName, list.Items, false); err != nil {
+		return err
 	}
+	if hc.Spec.IPv6Range != "" {
+		return overlapForRange(hc.Spec.IPv6Range, excludeName, list.Items, true)
+	}
+	return nil
+}
 
-	for _, existing := range list.Items {
+// overlapForRange reports an error if newRange overlaps the matching IP family range of
+// any existing config except excludeName. When useIPv6 is true, each existing config's
+// IPv6Range is compared; otherwise its IPRange. Empty or unparseable existing ranges are
+// skipped (they are validated on their own admission).
+func overlapForRange(newRange, excludeName string, items []HeliosConfig, useIPv6 bool) error {
+	newStart, newEnd, err := network.ParseIPRange(newRange)
+	if err != nil {
+		return nil // already validated by validateIPRange
+	}
+	for i := range items {
+		existing := &items[i]
 		if existing.Name == excludeName {
 			continue
 		}
-		existStart, existEnd, err := network.ParseIPRange(existing.Spec.IPRange)
+		exRange := existing.Spec.IPRange
+		if useIPv6 {
+			exRange = existing.Spec.IPv6Range
+		}
+		if exRange == "" {
+			continue
+		}
+		existStart, existEnd, err := network.ParseIPRange(exRange)
 		if err != nil {
 			continue
 		}
-		// Check overlap: ranges overlap if newStart <= existEnd && newEnd >= existStart
+		// Ranges overlap if newStart <= existEnd && newEnd >= existStart.
 		if network.CompareIPs(newStart, existEnd) <= 0 && network.CompareIPs(newEnd, existStart) >= 0 {
 			return fmt.Errorf("IP range %q overlaps with existing HeliosConfig %q (range: %s)",
-				hc.Spec.IPRange, existing.Name, existing.Spec.IPRange)
+				newRange, existing.Name, exRange)
 		}
 	}
 	return nil
