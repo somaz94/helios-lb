@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -104,7 +104,7 @@ func (m *IPManager) assignIPToService(ctx context.Context, svc *corev1.Service, 
 			currentSvc.Annotations = make(map[string]string)
 		}
 		currentSvc.Annotations["balancer.helios.dev/load-balancer-class"] = balancerv1.LoadBalancerClassHelios
-		currentSvc.Spec.LoadBalancerClass = pointer.String(balancerv1.LoadBalancerClassHelios)
+		currentSvc.Spec.LoadBalancerClass = ptr.To(balancerv1.LoadBalancerClassHelios)
 
 		ingress := []corev1.LoadBalancerIngress{{IP: ip}}
 		if ipv6 != "" {

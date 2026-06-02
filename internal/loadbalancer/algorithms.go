@@ -119,21 +119,15 @@ func (a *weightedRoundRobinAlgorithm) Select(backends []*Backend, serviceName st
 	state := a.states[serviceName]
 	a.mu.Unlock()
 
-	var healthyBackends []*Backend
+	healthyBackends := make([]*Backend, 0, len(backends))
+	weights := make([]int, 0, len(backends))
 	totalWeight := 0
 	for _, backend := range backends {
 		if backend.IsHealthy() {
-			for _, weight := range a.weights {
-				if weight.ServiceName == backend.ServiceName {
-					backend.Weight = weight.Weight
-					break
-				}
-			}
-			if backend.Weight == 0 {
-				backend.Weight = 1
-			}
+			w := a.resolveWeight(backend)
 			healthyBackends = append(healthyBackends, backend)
-			totalWeight += backend.Weight
+			weights = append(weights, w)
+			totalWeight += w
 		}
 	}
 
@@ -144,14 +138,32 @@ func (a *weightedRoundRobinAlgorithm) Select(backends []*Backend, serviceName st
 	current := atomic.AddUint32(&state.current, 1)
 	point := int(current) % totalWeight
 
-	for _, backend := range healthyBackends {
-		point -= backend.Weight
+	for i, backend := range healthyBackends {
+		point -= weights[i]
 		if point < 0 {
 			return backend
 		}
 	}
 
 	return healthyBackends[0]
+}
+
+// resolveWeight returns the effective weight for the backend's service,
+// using the configured weight when present and defaulting to 1 when zero.
+// It does not mutate the backend, keeping Select safe for concurrent use
+// on shared backend pointers.
+func (a *weightedRoundRobinAlgorithm) resolveWeight(backend *Backend) int {
+	w := backend.Weight
+	for _, weight := range a.weights {
+		if weight.ServiceName == backend.ServiceName {
+			w = weight.Weight
+			break
+		}
+	}
+	if w == 0 {
+		w = 1
+	}
+	return w
 }
 
 // --- IPHash ---
@@ -167,7 +179,7 @@ func (a *ipHashAlgorithm) Select(backends []*Backend, _ string, clientIP string)
 	hash.Write([]byte(clientIP))
 	hashValue := hash.Sum32()
 
-	var healthyBackends []*Backend
+	healthyBackends := make([]*Backend, 0, len(backends))
 	for _, backend := range backends {
 		if backend.IsHealthy() {
 			healthyBackends = append(healthyBackends, backend)
@@ -190,7 +202,7 @@ func (a *randomAlgorithm) Select(backends []*Backend, _ string, _ string) *Backe
 		return nil
 	}
 
-	var healthyBackends []*Backend
+	healthyBackends := make([]*Backend, 0, len(backends))
 	for _, backend := range backends {
 		if backend.IsHealthy() {
 			healthyBackends = append(healthyBackends, backend)

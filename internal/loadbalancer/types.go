@@ -60,7 +60,6 @@ type LoadBalancer struct {
 	mu        sync.RWMutex
 	backends  map[string][]*Backend
 	stats     map[string]*LoadBalancerStats
-	rrStates  map[string]*RoundRobinState
 	config    BalancerConfig
 	algorithm Algorithm
 	stopCh    chan struct{}

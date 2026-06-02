@@ -23,7 +23,6 @@ func NewLoadBalancer(config BalancerConfig) *LoadBalancer {
 	lb := &LoadBalancer{
 		backends:  make(map[string][]*Backend),
 		stats:     make(map[string]*LoadBalancerStats),
-		rrStates:  make(map[string]*RoundRobinState),
 		config:    config,
 		algorithm: NewAlgorithm(config.Type, config.Weights),
 		stopCh:    make(chan struct{}),

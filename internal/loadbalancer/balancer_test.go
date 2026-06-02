@@ -497,8 +497,9 @@ func TestEdgeCases(t *testing.T) {
 		if got == nil {
 			t.Error("Expected backend with config weight")
 		}
-		if backend.Weight != 5 {
-			t.Errorf("Expected weight 5 from config, got %d", backend.Weight)
+		wrr := lb.algorithm.(*weightedRoundRobinAlgorithm)
+		if w := wrr.resolveWeight(backend); w != 5 {
+			t.Errorf("Expected weight 5 from config, got %d", w)
 		}
 	})
 
@@ -519,8 +520,9 @@ func TestEdgeCases(t *testing.T) {
 		if got == nil {
 			t.Error("Expected backend with default weight")
 		}
-		if backend.Weight != 1 {
-			t.Errorf("Expected default weight 1, got %d", backend.Weight)
+		wrr := lb.algorithm.(*weightedRoundRobinAlgorithm)
+		if w := wrr.resolveWeight(backend); w != 1 {
+			t.Errorf("Expected default weight 1, got %d", w)
 		}
 	})
 

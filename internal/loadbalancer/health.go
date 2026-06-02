@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -71,7 +72,7 @@ func (lb *LoadBalancer) doHealthCheck() {
 
 // checkBackendHealth checks a single backend using the configured protocol.
 func checkBackendHealth(backend *Backend, opts HealthCheckOptions) bool {
-	address := net.JoinHostPort(backend.Address, fmt.Sprintf("%d", backend.Port))
+	address := net.JoinHostPort(backend.Address, strconv.Itoa(backend.Port))
 
 	switch opts.Protocol {
 	case "HTTP":
@@ -88,7 +89,7 @@ func checkTCP(address string, timeout time.Duration) bool {
 		return false
 	}
 	if conn != nil {
-		conn.Close()
+		_ = conn.Close()
 		return true
 	}
 	return false
@@ -106,8 +107,8 @@ func checkHTTP(address string, opts HealthCheckOptions) bool {
 		return false
 	}
 	defer func() {
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
 	}()
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
