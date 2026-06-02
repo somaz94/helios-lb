@@ -5,6 +5,33 @@ entries:
       helm.sh/hook: pre-install,pre-upgrade
       helm.sh/hook-weight: "-5"
     apiVersion: v2
+    appVersion: v0.6.2
+    created: "2026-06-02T08:50:23.950164937Z"
+    description: A Helm chart for Helios Load Balancer Controller
+    digest: 9e6ba7389b2f76ae2410a2b4642ca684fd462a43242549d213f2567626eac317
+    home: https://github.com/somaz94/helios-lb
+    icon: https://raw.githubusercontent.com/somaz94/helios-lb/main/docs/images/logo.png
+    keywords:
+    - kubernetes
+    - loadbalancer
+    - helios
+    - networking
+    - balancer
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - name: somaz94
+      url: https://github.com/somaz94
+    name: helios-lb
+    sources:
+    - https://github.com/somaz94/helios-lb
+    type: application
+    urls:
+    - https://somaz94.github.io/helios-lb/helm-repo/helios-lb-0.6.2.tgz
+    version: 0.6.2
+  - annotations:
+      helm.sh/hook: pre-install,pre-upgrade
+      helm.sh/hook-weight: "-5"
+    apiVersion: v2
     appVersion: v0.6.1
     created: "2026-06-02T07:02:02.756284372Z"
     description: A Helm chart for Helios Load Balancer Controller
@@ -190,4 +217,4 @@ entries:
     urls:
     - https://somaz94.github.io/helios-lb/helm-repo/helios-lb-0.1.0.tgz
     version: 0.1.0
-generated: "2026-06-02T07:02:02.755522169Z"
+generated: "2026-06-02T08:50:23.948954379Z"
