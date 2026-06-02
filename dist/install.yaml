@@ -569,7 +569,7 @@ spec:
         - --health-probe-bind-address=:9082
         command:
         - /manager
-        image: somaz940/helios-lb:v0.6.1
+        image: somaz940/helios-lb:v0.6.2
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
