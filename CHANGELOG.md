@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-04-27)
+## [v0.6.0](https://github.com/somaz94/helios-lb/compare/v0.5.0...v0.6.0) (2026-06-02)
 
 ### Features
 
@@ -10,10 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **loadbalancer:** avoid shared weight mutation in WRR Select race ([36e6a55](https://github.com/somaz94/helios-lb/commit/36e6a559842f1458cc71e1e9eadb8eead5cfe787))
+- **deps:** pin k8s.io/* to v0.35.4 for controller-runtime v0.23.x compatibility ([d9416c8](https://github.com/somaz94/helios-lb/commit/d9416c884d01191c9312364bc8d564a5658e0675))
 - **ci:** use staged tarball for OCI push (gh-pages branch checkout invalidates ./helm/ path) ([8872c92](https://github.com/somaz94/helios-lb/commit/8872c92ec50bf8182546865ebe360c5dd481e3bd))
+
+### Tests
+
+- **loadbalancer:** bump random selection iterations to 10000 to remove statistical flake ([2aebced](https://github.com/somaz94/helios-lb/commit/2aebcedfbd89a6129552ea294f1a57cfadf744ff))
 
 ### Continuous Integration
 
+- add concurrency guards to recurring workflows ([49c0f41](https://github.com/somaz94/helios-lb/commit/49c0f416d397d2f4e3b8fa39ff17b6ff28154a97))
 - use kind-e2e-test-action@v1 (replace inline e2e script) ([34de8fb](https://github.com/somaz94/helios-lb/commit/34de8fb1e6e5aea745d3bffac9669910bcd5c6de))
 - use go-kubebuilder-test-action@v1 (replace inline test script) ([81e983d](https://github.com/somaz94/helios-lb/commit/81e983dd27884abedbf73ccd77f716a3df9adeff))
 - use helm-chart-release-action@v1 (replace inline release script) ([e6d953d](https://github.com/somaz94/helios-lb/commit/e6d953d9a2948143cc69a2f25b1dffeaffb0da51))
@@ -21,6 +28,9 @@ All notable changes to this project will be documented in this file.
 
 ### Chores
 
+- bump version to v0.6.0 ([f6920ee](https://github.com/somaz94/helios-lb/commit/f6920ee700a7bbedf865bb9c98956c378a5626cc))
+- **deps:** bump the go-minor group with 6 updates (#54) ([#54](https://github.com/somaz94/helios-lb/pull/54)) ([fcf712a](https://github.com/somaz94/helios-lb/commit/fcf712a9768e7a75c60d6b26dbe5e898e2f7f4d0))
+- **deps:** bump the go-minor group with 3 updates (#53) ([#53](https://github.com/somaz94/helios-lb/pull/53)) ([768ab50](https://github.com/somaz94/helios-lb/commit/768ab50c4f4e4f84429c1eb0019a4d1a26414ea4))
 - **deps:** bump docker/setup-qemu-action from 3 to 4 ([f7cf812](https://github.com/somaz94/helios-lb/commit/f7cf8124a793e72f285564d4aa088da8b7cd212f))
 - **deps:** bump docker/login-action from 3 to 4 ([b5fb570](https://github.com/somaz94/helios-lb/commit/b5fb570a9372213864428a72534dd183aa3e01e0))
 - **deps:** bump the go-minor group with 4 updates (#50) ([#50](https://github.com/somaz94/helios-lb/pull/50)) ([b59e14d](https://github.com/somaz94/helios-lb/commit/b59e14dac17a7aa6811c5d22dcabff8425fcb7a7))
