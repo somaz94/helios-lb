@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.2](https://github.com/somaz94/helios-lb/compare/v0.6.1...v0.6.2) (2026-06-02)
+
+### Bug Fixes
+
+- **webhook:** reject overlapping IPv6 ranges in dual-stack overlap check ([997976a](https://github.com/somaz94/helios-lb/commit/997976ab5a7071977f0326667411208df178cf3c))
+
+### Chores
+
+- bump version to v0.6.2 ([fdbbee1](https://github.com/somaz94/helios-lb/commit/fdbbee1669ddd3bdf09d444fc7e4eecddb11a6a0))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.6.1](https://github.com/somaz94/helios-lb/compare/v0.6.0...v0.6.1) (2026-06-02)
 
 ### Bug Fixes
