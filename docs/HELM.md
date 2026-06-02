@@ -36,7 +36,7 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `nameOverride` | Override the name of the chart | `""` |
 | `fullnameOverride` | Override the full name of the chart | `""` |
 | `image.repository` | Controller image repository | `somaz940/helios-lb` |
-| `image.tag` | Controller image tag | `v0.6.0` |
+| `image.tag` | Controller image tag | `v0.6.1` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 | `serviceAccount.create` | Create ServiceAccount | `true` |
