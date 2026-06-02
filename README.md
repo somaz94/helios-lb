@@ -141,7 +141,7 @@ helm install helios-lb helios-lb/helios-lb
 
 # Or install with custom values
 helm install helios-lb helios-lb/helios-lb \
-  --set image.tag=v0.6.2 \
+  --set image.tag=v0.6.3 \
   --namespace helios-lb-system --create-namespace
 ```
 
@@ -168,7 +168,7 @@ cd helios-lb
 make install
 
 # Deploy the controller
-make deploy IMG=somaz940/helios-lb:v0.6.2
+make deploy IMG=somaz940/helios-lb:v0.6.3
 ```
 
 <br/>
