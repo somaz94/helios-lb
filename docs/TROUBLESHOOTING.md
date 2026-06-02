@@ -96,6 +96,7 @@ kubectl get svc <name> -o jsonpath='{.spec.loadBalancerClass}'
 - Verify IP range is valid and not conflicting with existing network
 - Ensure the IP is reachable from the cluster network
 - Check if the IP is already allocated to another service
+- Very large ranges (e.g. an IPv6 `/64`) are scan-capped at 65536 addresses; allocation returns a `scan limit` error instead of hanging — size the range to a realistic LB pool
 
 ```bash
 # Check allocated IPs

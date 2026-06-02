@@ -1,6 +1,7 @@
 package network
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -329,6 +330,33 @@ func TestIPInRange_IPv6(t *testing.T) {
 	t.Run("Single IPv6 no match", func(t *testing.T) {
 		if IPInRange("fd00::2", "fd00::1") {
 			t.Error("Expected fd00::2 to NOT match single IPv6 fd00::1")
+		}
+	})
+}
+
+func TestIPAllocator_ScanLimit(t *testing.T) {
+	t.Run("Scan stops at maxScan and returns scan-limit error", func(t *testing.T) {
+		allocator := NewIPAllocator()
+		allocator.maxScan = 4
+
+		// Exhaust the first maxScan addresses so the scan reaches the cap
+		// before it can reach the free .5 address.
+		for _, ip := range []string{"192.168.1.1", "192.168.1.2", "192.168.1.3", "192.168.1.4"} {
+			allocator.MarkUsed(ip)
+		}
+
+		_, err := allocator.AllocateIP("192.168.1.1-192.168.1.10")
+		if err == nil {
+			t.Fatal("Expected scan-limit error, got nil")
+		}
+		if !strings.Contains(err.Error(), "scan limit") {
+			t.Errorf("Expected scan-limit error, got %q", err)
+		}
+	})
+
+	t.Run("Default maxScan is set by constructor", func(t *testing.T) {
+		if got := NewIPAllocator().maxScan; got != defaultMaxScan {
+			t.Errorf("Expected default maxScan %d, got %d", defaultMaxScan, got)
 		}
 	})
 }
