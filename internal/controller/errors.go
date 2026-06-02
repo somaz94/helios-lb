@@ -1,6 +1,9 @@
 package controller
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // RetryableError represents an error that the controller should retry.
 type RetryableError struct {
@@ -45,8 +48,8 @@ func IsRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(*RetryableError)
-	return ok
+	var target *RetryableError
+	return errors.As(err, &target)
 }
 
 // IsPermanent returns true if the error should not be retried.
@@ -54,6 +57,6 @@ func IsPermanent(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(*PermanentError)
-	return ok
+	var target *PermanentError
+	return errors.As(err, &target)
 }

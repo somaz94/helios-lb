@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -53,6 +54,26 @@ func TestNilErrors(t *testing.T) {
 	}
 	if IsPermanent(nil) {
 		t.Error("expected IsPermanent(nil) to return false")
+	}
+}
+
+func TestWrappedErrors(t *testing.T) {
+	retryable := NewRetryableError("IP allocation failed", errors.New("connection refused"))
+	wrappedRetryable := fmt.Errorf("reconcile failed: %w", retryable)
+	if !IsRetryable(wrappedRetryable) {
+		t.Error("expected IsRetryable to return true for wrapped retryable error")
+	}
+	if IsPermanent(wrappedRetryable) {
+		t.Error("expected IsPermanent to return false for wrapped retryable error")
+	}
+
+	permanent := NewPermanentError("validation failed", errors.New("invalid IP range"))
+	wrappedPermanent := fmt.Errorf("reconcile failed: %w", permanent)
+	if !IsPermanent(wrappedPermanent) {
+		t.Error("expected IsPermanent to return true for wrapped permanent error")
+	}
+	if IsRetryable(wrappedPermanent) {
+		t.Error("expected IsRetryable to return false for wrapped permanent error")
 	}
 }
 
