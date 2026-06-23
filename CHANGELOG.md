@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased (2026-06-23)
+
+### Documentation
+
+- document DCO sign-off requirement in CONTRIBUTING ([86281d8](https://github.com/somaz94/helios-lb/commit/86281d8afa5c63626104f3b013b3968cf63b4550))
+
+### Continuous Integration
+
+- add DCO check via shared reusable workflow ([403819d](https://github.com/somaz94/helios-lb/commit/403819d8924fbdb6f030388788b9a0386f55900e))
+
+### Chores
+
+- **deps:** bump actions/checkout from 6 to 7 (#56) ([#56](https://github.com/somaz94/helios-lb/pull/56)) ([83706fe](https://github.com/somaz94/helios-lb/commit/83706fec6a39f208e253a1fa6689727d8fa0a66a))
+- **deps:** bump the go-minor group with 5 updates (#55) ([#55](https://github.com/somaz94/helios-lb/pull/55)) ([a237a38](https://github.com/somaz94/helios-lb/commit/a237a38b9ed1cb69acb7220feb70770f599cdc24))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.6.3](https://github.com/somaz94/helios-lb/compare/v0.6.2...v0.6.3) (2026-06-02)
 
 ### Bug Fixes
