@@ -1,5 +1,7 @@
 # Helios Load Balancer
 
+> Bare-metal Kubernetes load balancer (MetalLB alternative) — IPv4/IPv6 dual-stack, multiple LB algorithms, ARP layer-2, and Prometheus metrics.
+
 ![Top Language](https://img.shields.io/github/languages/top/somaz94/helios-lb?color=green&logo=go&logoColor=b)
 ![helios-lb](https://img.shields.io/github/v/tag/somaz94/helios-lb?label=helios-lb&logo=kubernetes&logoColor=white)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
