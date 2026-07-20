@@ -2,18 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-06-23)
+## Unreleased (2026-07-20)
+
+### Bug Fixes
+
+- warn when bump-version.sh finds no version to replace ([8f5c219](https://github.com/somaz94/helios-lb/commit/8f5c219940902cab60d4d2e8fce37e78f4921b95))
 
 ### Documentation
 
+- remove DCO sign-off instructions ([d549119](https://github.com/somaz94/helios-lb/commit/d549119449758d61fd17568117bcd959b355be44))
+- add keyword-rich tagline under title for discovery ([2c1b2e4](https://github.com/somaz94/helios-lb/commit/2c1b2e4a0514712844ee75278a3274fa7e5c8db4))
 - document DCO sign-off requirement in CONTRIBUTING ([86281d8](https://github.com/somaz94/helios-lb/commit/86281d8afa5c63626104f3b013b3968cf63b4550))
 
 ### Continuous Integration
 
+- remove DCO workflow ([b2d946a](https://github.com/somaz94/helios-lb/commit/b2d946a08cdcf6efbb9e8f277418e5e7879c35b4))
+- adopt semantic-pr, labels, lock-threads, PR size, and auto-assign reusables ([ff881b6](https://github.com/somaz94/helios-lb/commit/ff881b60c406063ba8fa8e84805b926e7d77db9f))
+- use reusable stale-issues workflow ([a992f23](https://github.com/somaz94/helios-lb/commit/a992f23e56dbcfaecfbc6027e4a887b323c480a4))
+- use reusable issue-greeting workflow ([49b2830](https://github.com/somaz94/helios-lb/commit/49b2830e2e50320158a7cdab1e05f24a8278386f))
+- use reusable dependabot-auto-merge workflow ([50d4d67](https://github.com/somaz94/helios-lb/commit/50d4d67fcc2993967d47123d233e5358d20cbf4d))
+- use reusable contributors workflow ([e3101d3](https://github.com/somaz94/helios-lb/commit/e3101d324c034faf66d023372bed45c6572b7b81))
+- gate e2e on fork PRs via ok-to-test label ([1d54d76](https://github.com/somaz94/helios-lb/commit/1d54d76de9fabe1a8b4bd164c37f2096e53fdc02))
+- add ok-to-test workflow stub ([a1989c0](https://github.com/somaz94/helios-lb/commit/a1989c0d149878456d46d520eca4be8b8bcd306a))
+- add PR welcome workflow stub ([e17c258](https://github.com/somaz94/helios-lb/commit/e17c258bbb89e6d1ce90c8e99c9b900fe78ee83f))
 - add DCO check via shared reusable workflow ([403819d](https://github.com/somaz94/helios-lb/commit/403819d8924fbdb6f030388788b9a0386f55900e))
 
 ### Chores
 
+- **deps:** bump actions/setup-go from 6 to 7 (#58) ([#58](https://github.com/somaz94/helios-lb/pull/58)) ([010e188](https://github.com/somaz94/helios-lb/commit/010e188dd6a675ff03f7d6e3b18ffccc18462d18))
+- **deps:** bump the go-minor group with 2 updates (#57) ([#57](https://github.com/somaz94/helios-lb/pull/57)) ([87b431a](https://github.com/somaz94/helios-lb/commit/87b431aee11c59d538fe80ae3f202e345bb79d48))
 - **deps:** bump actions/checkout from 6 to 7 (#56) ([#56](https://github.com/somaz94/helios-lb/pull/56)) ([83706fe](https://github.com/somaz94/helios-lb/commit/83706fec6a39f208e253a1fa6689727d8fa0a66a))
 - **deps:** bump the go-minor group with 5 updates (#55) ([#55](https://github.com/somaz94/helios-lb/pull/55)) ([a237a38](https://github.com/somaz94/helios-lb/commit/a237a38b9ed1cb69acb7220feb70770f599cdc24))
 
