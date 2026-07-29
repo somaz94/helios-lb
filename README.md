@@ -128,7 +128,7 @@ This way, you can leverage both load balancers in your cluster, each managing it
 ```bash
 # Single-command install — no helm repo add needed
 helm install helios-lb oci://ghcr.io/somaz94/charts/helios-lb \
-  --version 0.6.3 \
+  --version 0.7.0 \
   --namespace helios-lb-system --create-namespace
 ```
 
@@ -144,7 +144,7 @@ helm install helios-lb helios-lb/helios-lb
 
 # Or install with custom values
 helm install helios-lb helios-lb/helios-lb \
-  --set image.tag=v0.6.3 \
+  --set image.tag=v0.7.0 \
   --namespace helios-lb-system --create-namespace
 ```
 
@@ -171,7 +171,7 @@ cd helios-lb
 make install
 
 # Deploy the controller
-make deploy IMG=somaz940/helios-lb:v0.6.3
+make deploy IMG=somaz940/helios-lb:v0.7.0
 ```
 
 <br/>
