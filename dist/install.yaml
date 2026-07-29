@@ -93,6 +93,11 @@ spec:
                 required:
                 - enabled
                 type: object
+                x-kubernetes-validations:
+                - message: httpPath is required when the health check protocol is
+                    HTTP
+                  rule: self.protocol != 'HTTP' || (has(self.httpPath) && size(self.httpPath)
+                    > 0)
               ipRange:
                 description: |-
                   IPRange defines the IPv4 address range for load balancer.
@@ -168,14 +173,17 @@ spec:
                 description: Service references the service to be load balanced
                 type: string
               weights:
-                description: Weights configures per-service backend weights for WeightedRoundRobin
-                  method
+                description: |-
+                  Weights configures per-service backend weights for WeightedRoundRobin method.
+                  Bounded so the uniqueness rule stays inside the apiserver CEL cost budget.
                 items:
                   description: WeightConfig defines the weight for a specific service
                     backend
                   properties:
                     serviceName:
                       description: ServiceName is the name of the Kubernetes service
+                      maxLength: 253
+                      minLength: 1
                       type: string
                     weight:
                       default: 1
@@ -189,10 +197,21 @@ spec:
                   - serviceName
                   - weight
                   type: object
+                maxItems: 64
                 type: array
             required:
             - ipRange
             type: object
+            x-kubernetes-validations:
+            - message: weights can only be used with the WeightedRoundRobin method
+              rule: '!has(self.weights) || self.weights.size() == 0 || self.method
+                == ''WeightedRoundRobin'''
+            - message: duplicate port in spec.ports
+              rule: '!has(self.ports) || self.ports.all(p, self.ports.filter(q, q.port
+                == p.port).size() == 1)'
+            - message: duplicate serviceName in spec.weights
+              rule: '!has(self.weights) || self.weights.all(w, self.weights.filter(v,
+                v.serviceName == w.serviceName).size() == 1)'
           status:
             description: HeliosConfigStatus defines the observed state of HeliosConfig.
             properties:

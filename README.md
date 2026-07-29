@@ -37,7 +37,8 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 - Namespace isolation via `namespaceSelector`
 - Per-config IP allocation quota via `maxAllocations`
 - Configurable health checks (TCP/HTTP, custom timeout and interval)
-- Validating webhook for IP range, port, and overlap validation
+- CRD schema validation (CEL) for port/weight uniqueness, method-weight consistency, and health check config
+- Optional validating webhook for IP range format and cross-config overlap validation
 - ARP-based layer 2 mode
 - Pluggable algorithm interface for custom load balancing strategies
 - Prometheus metrics support
@@ -115,7 +116,7 @@ This way, you can leverage both load balancers in your cluster, each managing it
 <br/>
 
 ### Prerequisites
-- Kubernetes v1.16+
+- Kubernetes v1.25+ (the CRD ships CEL validation rules, which require `x-kubernetes-validations`)
 - kubectl v1.11.3+
 
 <br/>
@@ -127,7 +128,7 @@ This way, you can leverage both load balancers in your cluster, each managing it
 ```bash
 # Single-command install — no helm repo add needed
 helm install helios-lb oci://ghcr.io/somaz94/charts/helios-lb \
-  --version 0.5.0 \
+  --version 0.6.3 \
   --namespace helios-lb-system --create-namespace
 ```
 
@@ -345,13 +346,26 @@ The controller emits the following events on HeliosConfig resources:
 
 <br/>
 
+### Schema Validation (always on)
+
+These rules are part of the CRD schema (field constraints and CEL `x-kubernetes-validations`), so they are enforced on every cluster with no extra setup — including when the webhook is disabled:
+
+| Rule | Message |
+|---|---|
+| `spec.weights` may only be set when `spec.method` is `WeightedRoundRobin` | `weights can only be used with the WeightedRoundRobin method` |
+| `spec.ports[*].port` must be unique | `duplicate port in spec.ports` |
+| `spec.weights[*].serviceName` must be unique and non-empty | `duplicate serviceName in spec.weights` |
+| `spec.healthCheck.httpPath` is required when `protocol` is `HTTP` | `httpPath is required when the health check protocol is HTTP` |
+
+<br/>
+
 ### Validating Webhook
 
-Helios-LB includes a validating webhook that checks IP range format, port validity, weight configuration, and IP range overlap (both IPv4 and IPv6 ranges) between HeliosConfig resources.
+The webhook adds the checks that the CRD schema cannot express — IP range **format** (single IP / range / CIDR, IPv4 and IPv6) and IP range **overlap between different HeliosConfig resources**, which requires reading other objects in the cluster.
 
 The webhook is **disabled by default** and can be enabled in three ways:
 
-1. **Without webhook (default)**: The controller runs without admission validation. CRD-level validation (kubebuilder markers) still applies.
+1. **Without webhook (default)**: IP range format and cross-config overlap are not checked at admission; a malformed range surfaces as a reconcile error instead. All schema rules in the table above still apply.
 
 2. **With webhook + cert-manager**: Recommended for production. cert-manager automatically provisions and rotates TLS certificates.
    ```bash

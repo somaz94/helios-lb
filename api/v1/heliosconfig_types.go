@@ -24,6 +24,9 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // HeliosConfigSpec defines the desired state of HeliosConfig.
+// +kubebuilder:validation:XValidation:rule="!has(self.weights) || self.weights.size() == 0 || self.method == 'WeightedRoundRobin'",message="weights can only be used with the WeightedRoundRobin method"
+// +kubebuilder:validation:XValidation:rule="!has(self.ports) || self.ports.all(p, self.ports.filter(q, q.port == p.port).size() == 1)",message="duplicate port in spec.ports"
+// +kubebuilder:validation:XValidation:rule="!has(self.weights) || self.weights.all(w, self.weights.filter(v, v.serviceName == w.serviceName).size() == 1)",message="duplicate serviceName in spec.weights"
 type HeliosConfigSpec struct {
 	// IPRange defines the IPv4 address range for load balancer.
 	// Supports single IP ("192.168.1.100"), range ("192.168.1.100-192.168.1.200"),
@@ -58,7 +61,9 @@ type HeliosConfigSpec struct {
 	// +kubebuilder:default:=RoundRobin
 	Method string `json:"method,omitempty"`
 
-	// Weights configures per-service backend weights for WeightedRoundRobin method
+	// Weights configures per-service backend weights for WeightedRoundRobin method.
+	// Bounded so the uniqueness rule stays inside the apiserver CEL cost budget.
+	// +kubebuilder:validation:MaxItems=64
 	// +optional
 	Weights []WeightConfig `json:"weights,omitempty"`
 
@@ -83,6 +88,8 @@ type HeliosConfigSpec struct {
 type WeightConfig struct {
 	// ServiceName is the name of the Kubernetes service
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	ServiceName string `json:"serviceName"`
 
 	// Weight is the relative weight for traffic distribution (higher = more traffic)
@@ -93,6 +100,7 @@ type WeightConfig struct {
 }
 
 // HealthCheckConfig defines the health check parameters for backends
+// +kubebuilder:validation:XValidation:rule="self.protocol != 'HTTP' || (has(self.httpPath) && size(self.httpPath) > 0)",message="httpPath is required when the health check protocol is HTTP"
 type HealthCheckConfig struct {
 	// Enabled enables or disables health checking
 	// +kubebuilder:default:=true

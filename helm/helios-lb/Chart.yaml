@@ -6,7 +6,7 @@ version: 0.6.3
 appVersion: "v0.6.3"
 
 # Dependencies and requirements
-kubeVersion: ">=1.16.0-0"
+kubeVersion: ">=1.25.0-0"
 
 # Keywords and categories for documentation
 keywords:
