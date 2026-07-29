@@ -642,7 +642,7 @@ func TestHealthCheckSuccessPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to start listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	addr := ln.Addr().(*net.TCPAddr)
 

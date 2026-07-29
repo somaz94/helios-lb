@@ -477,6 +477,8 @@ var _ = Describe("SetupWithManager", func() {
 				NetworkMgr: networkMgr,
 				Metrics:    metricsRecorder,
 			},
+			// SA1019: matches the production wiring in cmd/main.go; see the note there.
+			//nolint:staticcheck
 			Recorder: mgr.GetEventRecorderFor("helios-lb-controller"),
 		}
 

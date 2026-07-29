@@ -114,7 +114,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Check if the HeliosConfig is being deleted
-	if !heliosConfig.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !heliosConfig.DeletionTimestamp.IsZero() {
 		return r.handleDeletion(ctx, &heliosConfig)
 	}
 

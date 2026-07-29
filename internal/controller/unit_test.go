@@ -201,7 +201,7 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	// Pre-allocate the only IP in range so AllocateIP returns "no available IPs" error
-	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.100")
+	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.100")
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
@@ -973,8 +973,8 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	// Pre-allocate all IPs in the range so AllocateIP returns "no available IPs" error
-	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
-	r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
+	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
+	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},

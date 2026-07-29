@@ -178,7 +178,10 @@ func main() {
 		Balancer:   lb,
 		Metrics:    metricsRecorder,
 		IPMgr:      ipMgr,
-		Recorder:   mgr.GetEventRecorderFor("helios-lb-controller"),
+		// SA1019: GetEventRecorder returns the events.k8s.io/v1 recorder, whose
+		// Eventf signature differs. Migrating the event surface is tracked separately.
+		//nolint:staticcheck
+		Recorder: mgr.GetEventRecorderFor("helios-lb-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HeliosConfig")
 		os.Exit(1)
