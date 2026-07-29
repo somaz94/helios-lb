@@ -2,14 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased (2026-07-20)
+## [v0.7.0](https://github.com/somaz94/helios-lb/compare/v0.6.3...v0.7.0) (2026-07-29)
+
+### Features
+
+- **crd:** enforce the single-object HeliosConfig rules with CEL validation ([2c898a6](https://github.com/somaz94/helios-lb/commit/2c898a60b524f748460c295bd32bc382fc5b2e14))
 
 ### Bug Fixes
 
+- **chart:** separate the HeliosConfig preset documents so multiple presets render ([bb42aeb](https://github.com/somaz94/helios-lb/commit/bb42aeb005e7c1c42bb9a4b7a0cf4567a12ab3d2))
+- **hack:** update the OCI chart version in docs during a version bump ([625790a](https://github.com/somaz94/helios-lb/commit/625790a34dfb218ac3b2d1fa7a168b8a7b620d95))
 - warn when bump-version.sh finds no version to replace ([8f5c219](https://github.com/somaz94/helios-lb/commit/8f5c219940902cab60d4d2e8fce37e78f4921b95))
 
 ### Documentation
 
+- translate remaining Korean comments in the RBAC template to English ([044d556](https://github.com/somaz94/helios-lb/commit/044d556dd787b6fb50d8716d75659c56b1be8008))
 - remove DCO sign-off instructions ([d549119](https://github.com/somaz94/helios-lb/commit/d549119449758d61fd17568117bcd959b355be44))
 - add keyword-rich tagline under title for discovery ([2c1b2e4](https://github.com/somaz94/helios-lb/commit/2c1b2e4a0514712844ee75278a3274fa7e5c8db4))
 - document DCO sign-off requirement in CONTRIBUTING ([86281d8](https://github.com/somaz94/helios-lb/commit/86281d8afa5c63626104f3b013b3968cf63b4550))
@@ -29,6 +36,9 @@ All notable changes to this project will be documented in this file.
 
 ### Chores
 
+- **release:** bump version to v0.7.0 ([afacb54](https://github.com/somaz94/helios-lb/commit/afacb54868f3f3a50e1fc0735106dcffc5f065c4))
+- **lint:** use the golangci-lint v2 module path and config schema ([5e30439](https://github.com/somaz94/helios-lb/commit/5e3043938e97d213bcbd623c368fd28176a6c3bd))
+- **deps:** bump the go-minor group with 5 updates (#59) ([#59](https://github.com/somaz94/helios-lb/pull/59)) ([c42ae64](https://github.com/somaz94/helios-lb/commit/c42ae648cbfbbdf476be96145b5462e3f0a8a512))
 - **deps:** bump actions/setup-go from 6 to 7 (#58) ([#58](https://github.com/somaz94/helios-lb/pull/58)) ([010e188](https://github.com/somaz94/helios-lb/commit/010e188dd6a675ff03f7d6e3b18ffccc18462d18))
 - **deps:** bump the go-minor group with 2 updates (#57) ([#57](https://github.com/somaz94/helios-lb/pull/57)) ([87b431a](https://github.com/somaz94/helios-lb/commit/87b431aee11c59d538fe80ae3f202e345bb79d48))
 - **deps:** bump actions/checkout from 6 to 7 (#56) ([#56](https://github.com/somaz94/helios-lb/pull/56)) ([83706fe](https://github.com/somaz94/helios-lb/commit/83706fec6a39f208e253a1fa6689727d8fa0a66a))
