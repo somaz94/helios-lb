@@ -29,6 +29,7 @@ spec:
 {{- end }}
 
 {{- if .Values.customresource.port.enabled }}
+---
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
@@ -53,6 +54,7 @@ spec:
 {{- end }}
 
 {{- if .Values.customresource.weight.enabled }}
+---
 apiVersion: balancer.helios.dev/v1
 kind: HeliosConfig
 metadata:
