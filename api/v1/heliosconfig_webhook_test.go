@@ -12,6 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// testHealthCheckProtocolHTTP is the HTTP probe protocol accepted by
+// HealthCheckConfig.Protocol; it additionally requires HTTPPath to be set.
+const testHealthCheckProtocolHTTP = "HTTP"
+
 func TestValidateIPRange(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -104,9 +108,9 @@ func TestValidateHealthCheck(t *testing.T) {
 	}{
 		{"nil config", nil, false},
 		{"valid TCP", &HealthCheckConfig{Protocol: "TCP"}, false},
-		{"valid HTTP", &HealthCheckConfig{Protocol: "HTTP", HTTPPath: "/health"}, false},
+		{"valid HTTP", &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP, HTTPPath: "/health"}, false},
 		{"invalid protocol", &HealthCheckConfig{Protocol: "GRPC"}, true},
-		{"HTTP without path", &HealthCheckConfig{Protocol: "HTTP"}, true},
+		{"HTTP without path", &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP}, true},
 	}
 
 	for _, tt := range tests {
@@ -213,7 +217,7 @@ func TestValidateCreate(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "test"},
 			Spec: HeliosConfigSpec{
 				IPRange:     "10.0.0.1",
-				HealthCheck: &HealthCheckConfig{Protocol: "HTTP"},
+				HealthCheck: &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP},
 			},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -354,7 +358,7 @@ func TestDeepCopy(t *testing.T) {
 				Enabled:         true,
 				IntervalSeconds: 5,
 				TimeoutMs:       1000,
-				Protocol:        "HTTP",
+				Protocol:        testHealthCheckProtocolHTTP,
 				HTTPPath:        "/healthz",
 			},
 		},
@@ -435,7 +439,7 @@ func TestDeepCopy(t *testing.T) {
 
 	// Test HealthCheckConfig DeepCopy
 	hcCopy := hc.Spec.HealthCheck.DeepCopy()
-	if hcCopy.Protocol != "HTTP" {
+	if hcCopy.Protocol != testHealthCheckProtocolHTTP {
 		t.Error("HealthCheckConfig DeepCopy mismatch")
 	}
 

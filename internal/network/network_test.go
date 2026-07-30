@@ -24,7 +24,7 @@ func TestNetworkManager(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to allocate IP: %v", err)
 		}
-		if ip1 != "192.168.1.1" {
+		if ip1 != testRangeStartIP {
 			t.Errorf("Expected first IP to be 192.168.1.1, got %s", ip1)
 		}
 
@@ -34,7 +34,7 @@ func TestNetworkManager(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to reallocate IP: %v", err)
 		}
-		if ip2 != "192.168.1.1" {
+		if ip2 != testRangeStartIP {
 			t.Errorf("Expected to get released IP %s back, got %s", ip1, ip2)
 		}
 	})
@@ -49,7 +49,7 @@ func TestNetworkManager(t *testing.T) {
 
 	t.Run("Single IP Allocation", func(t *testing.T) {
 		nm := NewNetworkManager()
-		singleIP := "192.168.1.1"
+		singleIP := testRangeStartIP
 
 		// First allocation
 		ip1, err := nm.AllocateIP(singleIP)

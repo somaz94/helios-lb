@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch
-//+kubebuilder:rbac:groups=core,resources=services/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=services/status,verbs=get;update;patch
 
 package main
 

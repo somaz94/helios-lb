@@ -24,6 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// testLoadBalancerIP is the LoadBalancer VIP these tests exercise end to end:
+// it is the sole address of the HeliosConfig IPRange, the Service's requested
+// LoadBalancerIP, and the value expected in AllocatedIPs and ingress status.
+const testLoadBalancerIP = "192.168.1.100"
+
 func newTestScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(s)
@@ -95,7 +100,7 @@ func TestReconcile_AddFinalizerError(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -132,7 +137,7 @@ func TestReconcile_ListServicesError(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -180,7 +185,7 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -221,7 +226,7 @@ func TestReconcile_ServiceUpdateRetryError(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -232,7 +237,7 @@ func TestReconcile_ServiceUpdateRetryError(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -276,7 +281,7 @@ func TestReconcile_ServiceStatusUpdateError(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -287,7 +292,7 @@ func TestReconcile_ServiceStatusUpdateError(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -328,7 +333,7 @@ func TestReconcile_HeliosStatusUpdateError(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -339,7 +344,7 @@ func TestReconcile_HeliosStatusUpdateError(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -385,12 +390,12 @@ func TestHandleDeletion_WithAllocatedIPs(t *testing.T) {
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": "192.168.1.100",
+				"svc-1": testLoadBalancerIP,
 				"svc-2": "192.168.1.101",
 			},
 			Phase: balancerv1.StateActive,
@@ -426,12 +431,12 @@ func TestHandleDeletion_RemoveFinalizerError(t *testing.T) {
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": "192.168.1.100",
+				"svc-1": testLoadBalancerIP,
 			},
 		},
 	}
@@ -472,7 +477,7 @@ func TestHandleDeletion_NoFinalizer(t *testing.T) {
 			Finalizers:        []string{"other-finalizer"},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -501,7 +506,7 @@ func TestFindLoadBalancerServices_WithService(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 		},
 	}
 
@@ -689,7 +694,7 @@ func TestReconcile_SuccessfulIPAllocation(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -700,7 +705,7 @@ func TestReconcile_SuccessfulIPAllocation(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -742,7 +747,7 @@ func TestReconcile_NoLBServices(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -785,7 +790,7 @@ func TestReconcile_ServiceAlreadyHasIngress(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -796,12 +801,12 @@ func TestReconcile_ServiceAlreadyHasIngress(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 		Status: corev1.ServiceStatus{
 			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{{IP: "192.168.1.100"}},
+				Ingress: []corev1.LoadBalancerIngress{{IP: testLoadBalancerIP}},
 			},
 		},
 	}
@@ -833,7 +838,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -846,7 +851,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:              corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP:    "192.168.1.100",
+			LoadBalancerIP:    testLoadBalancerIP,
 			LoadBalancerClass: &metallbClass,
 			Ports:             []corev1.ServicePort{{Port: 80}},
 		},
@@ -895,7 +900,7 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -906,7 +911,7 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:              corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP:    "192.168.1.100",
+			LoadBalancerIP:    testLoadBalancerIP,
 			LoadBalancerClass: &heliosClass,
 			Ports:             []corev1.ServicePort{{Port: 80}},
 		},
@@ -960,7 +965,7 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -1016,7 +1021,7 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": "192.168.1.100",
+				"svc-1": testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1034,7 +1039,7 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 		},
 		Status: corev1.ServiceStatus{
 			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{{IP: "192.168.1.100"}},
+				Ingress: []corev1.LoadBalancerIngress{{IP: testLoadBalancerIP}},
 			},
 		},
 	}
@@ -1077,12 +1082,12 @@ func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": "192.168.1.100",
+				"svc-1": testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1100,7 +1105,7 @@ func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
 		},
 		Status: corev1.ServiceStatus{
 			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{{IP: "192.168.1.100"}},
+				Ingress: []corev1.LoadBalancerIngress{{IP: testLoadBalancerIP}},
 			},
 		},
 	}
@@ -1141,7 +1146,7 @@ func TestReconcile_ServiceUpdateError(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 			Method:  "RoundRobin",
 		},
 	}
@@ -1152,7 +1157,7 @@ func TestReconcile_ServiceUpdateError(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -1309,7 +1314,7 @@ func TestReconcile_IPConflictDetected(t *testing.T) {
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": "192.168.1.100",
+				"svc-a": testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1377,7 +1382,7 @@ func TestReconcile_NoIPConflict_NonOverlappingRanges(t *testing.T) {
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": "192.168.1.100",
+				"svc-a": testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1526,7 +1531,7 @@ func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": "192.168.1.100",
+				"svc-a": testLoadBalancerIP,
 			},
 		},
 	}
@@ -1571,7 +1576,7 @@ func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// Should skip .100 (used by helios-1) and allocate .101
-	if ip == "192.168.1.100" {
+	if ip == testLoadBalancerIP {
 		t.Error("should not allocate 192.168.1.100 which is used by another config")
 	}
 	if ip != "192.168.1.101" {
@@ -1621,7 +1626,7 @@ func TestAllocateAndAssign_DualStack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if ip != "192.168.1.100" {
+	if ip != testLoadBalancerIP {
 		t.Errorf("expected IPv4 192.168.1.100, got %s", ip)
 	}
 	if ipv6 != "fd00::1" {
@@ -1637,7 +1642,7 @@ func TestAllocateAndAssign_DualStack(t *testing.T) {
 	if len(updatedSvc.Status.LoadBalancer.Ingress) != 2 {
 		t.Fatalf("expected 2 ingress entries (dual-stack), got %d", len(updatedSvc.Status.LoadBalancer.Ingress))
 	}
-	if updatedSvc.Status.LoadBalancer.Ingress[0].IP != "192.168.1.100" {
+	if updatedSvc.Status.LoadBalancer.Ingress[0].IP != testLoadBalancerIP {
 		t.Errorf("expected first ingress IP 192.168.1.100, got %s", updatedSvc.Status.LoadBalancer.Ingress[0].IP)
 	}
 	if updatedSvc.Status.LoadBalancer.Ingress[1].IP != "fd00::1" {
@@ -1654,7 +1659,7 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100",
+			IPRange: testLoadBalancerIP,
 		},
 	}
 	svc := &corev1.Service{
@@ -1664,7 +1669,7 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "192.168.1.100",
+			LoadBalancerIP: testLoadBalancerIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -1687,7 +1692,7 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if ip != "192.168.1.100" {
+	if ip != testLoadBalancerIP {
 		t.Errorf("expected 192.168.1.100, got %s", ip)
 	}
 	if ipv6 != "" {
