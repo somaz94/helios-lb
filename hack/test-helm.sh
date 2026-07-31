@@ -15,7 +15,10 @@ CHART_DIR="helm/helios-lb"
 RELEASE_NAME="hlb-test"
 NAMESPACE="helios-lb-system"
 
-# Configurable test IP via environment variable
+# Configurable test IP via environment variable.
+# The default is an RFC 5737 documentation address and is not reachable on any
+# cluster — override it with a free IP from your own subnet for a real run:
+#   TEST_IP=172.30.0.100 make test-helm
 TEST_IP="${TEST_IP:-192.0.2.100}"
 TEST_IPV6="${TEST_IPV6:-fd00::100}"
 

@@ -14,7 +14,10 @@ SKIP=0
 NAMESPACE="helios-lb-system"
 SAMPLES_DIR="config/samples"
 
-# Configurable test IPs via environment variables
+# Configurable test IPs via environment variables.
+# The defaults are RFC 5737 documentation addresses (192.0.2.0/24) so this repo
+# carries no real network; they are not reachable on any cluster, so a real run
+# must override them with free IPs from your own subnet.
 # Override with: TEST_IP=172.30.0.100 TEST_IP2=172.30.0.101 TEST_IP_RANGE=172.30.0.100-172.30.0.110 make test-integration
 TEST_IP="${TEST_IP:-192.0.2.100}"
 TEST_IP2="${TEST_IP2:-192.0.2.101}"

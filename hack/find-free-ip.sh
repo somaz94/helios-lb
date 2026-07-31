@@ -8,6 +8,11 @@ set -euo pipefail
 #   ./hack/find-free-ip.sh 192.168.1.100 192.168.1.110   # Custom range
 #   ./hack/find-free-ip.sh 172.30.0.50 172.30.0.60 3     # Find 3 free IPs
 #
+# NOTE: the built-in defaults are RFC 5737 documentation addresses
+# (192.0.2.0/24). They are deliberately non-routable so this repo carries no
+# real network, which also means a bare run finds nothing usable — pass
+# START_IP/END_IP (or the Makefile variables) to scan your own subnet.
+#
 # Environment:
 #   SCAN_TIMEOUT=1    Ping timeout in seconds (default: 1)
 
@@ -23,8 +28,8 @@ usage() {
   echo "Scan a range of IPs and find unused ones for helios-lb testing."
   echo ""
   echo "Arguments:"
-  echo "  START_IP    First IP to scan (default: 192.0.2.100)"
-  echo "  END_IP      Last IP to scan  (default: 192.0.2.110)"
+  echo "  START_IP    First IP to scan (default: 192.0.2.100 - documentation range, pass your own)"
+  echo "  END_IP      Last IP to scan  (default: 192.0.2.110 - documentation range, pass your own)"
   echo "  COUNT       Number of free IPs needed (default: 2)"
   echo ""
   echo "Environment variables:"
