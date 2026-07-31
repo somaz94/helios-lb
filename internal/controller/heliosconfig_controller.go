@@ -115,7 +115,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Check if the HeliosConfig is being deleted
 	if !heliosConfig.DeletionTimestamp.IsZero() {
-		return r.handleDeletion(ctx, &heliosConfig)
+		return ctrl.Result{}, r.handleDeletion(ctx, &heliosConfig)
 	}
 
 	// List all services
@@ -253,7 +253,7 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // handleDeletion handles the deletion of a HeliosConfig
-func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfig *balancerv1.HeliosConfig) (ctrl.Result, error) {
+func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfig *balancerv1.HeliosConfig) error {
 	logger := log.FromContext(ctx).WithValues(
 		LogKeyConfig, heliosConfig.Name,
 		LogKeyNamespace, heliosConfig.Namespace,
@@ -272,14 +272,14 @@ func (r *HeliosConfigReconciler) handleDeletion(ctx context.Context, heliosConfi
 			logger.Error(err, "failed to remove finalizer")
 			r.Recorder.Eventf(heliosConfig, corev1.EventTypeWarning, "CleanupFailed",
 				"Failed to remove finalizer: %v", err)
-			return ctrl.Result{}, err
+			return err
 		}
 		r.Recorder.Event(heliosConfig, corev1.EventTypeNormal, "CleanupComplete",
 			"All allocated IPs released and finalizer removed")
 		logger.Info("finalizer removed, deletion complete")
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

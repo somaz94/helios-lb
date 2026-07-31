@@ -489,12 +489,8 @@ func TestHandleDeletion_NoFinalizer(t *testing.T) {
 		Build()
 	r := newTestReconciler(cl)
 
-	result, err := r.handleDeletion(context.Background(), helios)
-	if err != nil {
+	if err := r.handleDeletion(context.Background(), helios); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.RequeueAfter != 0 {
-		t.Errorf("expected no requeue, got %v", result.RequeueAfter)
 	}
 }
 
