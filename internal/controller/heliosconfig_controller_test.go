@@ -23,7 +23,7 @@ import (
 )
 
 var _ = Describe("HeliosConfig Controller", func() {
-	const namespace = "default"
+	const namespace = nsDefault
 	var testID int
 
 	ctx := context.Background()
@@ -69,7 +69,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: specificIP,
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -118,7 +118,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: "invalid-ip-address",
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -164,7 +164,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: fmt.Sprintf("10.%d.1.100-10.%d.1.200", testID, testID),
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -191,7 +191,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: specificIP,
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -239,7 +239,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: heliosIP,
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -286,7 +286,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: ipRange,
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -351,7 +351,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: ipRange,
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())
@@ -418,7 +418,7 @@ var _ = Describe("HeliosConfig Controller", func() {
 			},
 			Spec: balancerv1.HeliosConfigSpec{
 				IPRange: fmt.Sprintf("10.%d.1.100", testID),
-				Method:  "RoundRobin",
+				Method:  methodRoundRobin,
 			},
 		}
 		Expect(k8sClient.Create(ctx, heliosConfig)).To(Succeed())

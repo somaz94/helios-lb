@@ -159,7 +159,7 @@ func validatePorts(ports []PortConfig) error {
 			return fmt.Errorf("port %d out of valid range (1-65535)", p.Port)
 		}
 		switch p.Protocol {
-		case "", "TCP", "UDP":
+		case "", ProtocolTCP, ProtocolUDP:
 		default:
 			return fmt.Errorf("invalid protocol %q for port %d: must be TCP or UDP", p.Protocol, p.Port)
 		}
@@ -173,7 +173,7 @@ func validatePorts(ports []PortConfig) error {
 
 // validateWeights validates weight configurations.
 func validateWeights(weights []WeightConfig, method string) error {
-	if len(weights) > 0 && method != "WeightedRoundRobin" {
+	if len(weights) > 0 && method != MethodWeightedRoundRobin {
 		return fmt.Errorf("weights can only be used with WeightedRoundRobin method, got %q", method)
 	}
 	seen := make(map[string]bool)
@@ -198,11 +198,11 @@ func validateHealthCheck(hc *HealthCheckConfig) error {
 		return nil
 	}
 	switch hc.Protocol {
-	case "", "TCP", "HTTP":
+	case "", ProtocolTCP, ProtocolHTTP:
 	default:
 		return fmt.Errorf("invalid health check protocol %q: must be TCP or HTTP", hc.Protocol)
 	}
-	if hc.Protocol == "HTTP" && hc.HTTPPath == "" {
+	if hc.Protocol == ProtocolHTTP && hc.HTTPPath == "" {
 		return fmt.Errorf("httpPath is required when health check protocol is HTTP")
 	}
 	return nil

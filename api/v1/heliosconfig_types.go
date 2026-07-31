@@ -172,6 +172,20 @@ const (
 	// LoadBalancerClassHelios is the load balancer class name for Helios LB.
 	LoadBalancerClassHelios = "helios-lb"
 
+	// Load balancing methods accepted by spec.method. Mirrors the
+	// +kubebuilder:validation:Enum marker on HeliosConfigSpec.Method.
+	MethodRoundRobin         = "RoundRobin"
+	MethodLeastConnection    = "LeastConnection"
+	MethodWeightedRoundRobin = "WeightedRoundRobin"
+	MethodIPHash             = "IPHash"
+	MethodRandom             = "Random"
+
+	// Protocols accepted by port configuration (TCP/UDP) and health check
+	// configuration (TCP/HTTP).
+	ProtocolTCP  = "TCP"
+	ProtocolUDP  = "UDP"
+	ProtocolHTTP = "HTTP"
+
 	// State constants
 	StatePending = "Pending"
 	StateActive  = "Active"

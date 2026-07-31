@@ -17,7 +17,7 @@ func NewLoadBalancer(config BalancerConfig) *LoadBalancer {
 		config.HealthCheckOpts.Timeout = time.Second
 	}
 	if config.HealthCheckOpts.Protocol == "" {
-		config.HealthCheckOpts.Protocol = "TCP"
+		config.HealthCheckOpts.Protocol = protocolTCP
 	}
 
 	lb := &LoadBalancer{

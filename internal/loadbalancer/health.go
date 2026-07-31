@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// protocolTCP is the default health check protocol.
+const protocolTCP = "TCP"
+
 // HealthCheckOptions holds configurable health check parameters.
 type HealthCheckOptions struct {
 	Timeout  time.Duration
@@ -20,7 +23,7 @@ type HealthCheckOptions struct {
 func DefaultHealthCheckOptions() HealthCheckOptions {
 	return HealthCheckOptions{
 		Timeout:  time.Second,
-		Protocol: "TCP",
+		Protocol: protocolTCP,
 	}
 }
 

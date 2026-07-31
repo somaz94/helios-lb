@@ -5,6 +5,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
+// Prometheus label names. Declared once so a metric and the code that reports
+// it can never disagree on a label spelling.
+const (
+	labelName           = "name"
+	labelNamespace      = "namespace"
+	labelBackendAddress = "backend_address"
+	labelServiceName    = "service_name"
+	labelOperation      = "operation"
+	labelStatus         = "status"
+	labelResult         = "result"
+	labelReason         = "reason"
+	labelIPAddress      = "ip_address"
+)
+
 var (
 	// Load balancer status metric
 	lbStatus = prometheus.NewGaugeVec(
@@ -12,7 +26,7 @@ var (
 			Name: "helios_lb_status",
 			Help: "Status of the load balancer (1 for active, 0 for inactive)",
 		},
-		[]string{"name", "namespace"},
+		[]string{labelName, labelNamespace},
 	)
 
 	// Backend connection count metric
@@ -21,7 +35,7 @@ var (
 			Name: "helios_backend_connections",
 			Help: "Number of active connections per backend",
 		},
-		[]string{"backend_address", "service_name"},
+		[]string{labelBackendAddress, labelServiceName},
 	)
 
 	// Backend health metric
@@ -30,7 +44,7 @@ var (
 			Name: "helios_backend_health",
 			Help: "Health status of backend (1 for healthy, 0 for unhealthy)",
 		},
-		[]string{"backend_address", "service_name"},
+		[]string{labelBackendAddress, labelServiceName},
 	)
 
 	// Load balancer request processing time
@@ -40,7 +54,7 @@ var (
 			Help:    "Time taken to process requests",
 			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
 		},
-		[]string{"service_name"},
+		[]string{labelServiceName},
 	)
 
 	// Load balancing operation success/failure counter
@@ -49,7 +63,7 @@ var (
 			Name: "helios_operations_total",
 			Help: "Total number of load balancing operations",
 		},
-		[]string{"service_name", "operation", "status"},
+		[]string{labelServiceName, labelOperation, labelStatus},
 	)
 
 	// IP allocation metric
@@ -58,7 +72,7 @@ var (
 			Name: "helios_ip_allocation_status",
 			Help: "Status of IP allocation (1 for allocated, 0 for free)",
 		},
-		[]string{"ip_address"},
+		[]string{labelIPAddress},
 	)
 
 	// Reconciliation duration histogram
@@ -68,7 +82,7 @@ var (
 			Help:    "Duration of HeliosConfig reconciliation in seconds",
 			Buckets: prometheus.ExponentialBuckets(0.001, 2, 12), // 1ms to ~4s
 		},
-		[]string{"name", "namespace", "result"},
+		[]string{labelName, labelNamespace, labelResult},
 	)
 
 	// Reconciliation total counter
@@ -77,7 +91,7 @@ var (
 			Name: "helios_reconcile_total",
 			Help: "Total number of reconciliations by result",
 		},
-		[]string{"name", "namespace", "result"},
+		[]string{labelName, labelNamespace, labelResult},
 	)
 
 	// Requeue reason counter
@@ -86,7 +100,7 @@ var (
 			Name: "helios_requeue_reason_total",
 			Help: "Total number of requeue events by reason",
 		},
-		[]string{"name", "namespace", "reason"},
+		[]string{labelName, labelNamespace, labelReason},
 	)
 
 	// IP allocation pool utilization
@@ -95,7 +109,7 @@ var (
 			Name: "helios_ip_pool_utilization",
 			Help: "Number of allocated IPs per HeliosConfig",
 		},
-		[]string{"name", "namespace"},
+		[]string{labelName, labelNamespace},
 	)
 )
 

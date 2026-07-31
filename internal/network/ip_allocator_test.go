@@ -5,9 +5,12 @@ import (
 	"testing"
 )
 
-// testRangeStartIP is the first address of the IP ranges used across the
-// network tests, so it is also the first address the allocator hands out.
-const testRangeStartIP = "192.168.1.1"
+// The first two addresses of the IP ranges used across the network tests, in
+// the order the allocator hands them out.
+const (
+	testRangeStartIP  = "192.168.1.1"
+	testRangeSecondIP = "192.168.1.2"
+)
 
 func TestIPAllocator(t *testing.T) {
 	t.Run("Valid IP range", func(t *testing.T) {
@@ -24,7 +27,7 @@ func TestIPAllocator(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to allocate second IP: %v", err)
 		}
-		if ip2 != "192.168.1.2" {
+		if ip2 != testRangeSecondIP {
 			t.Errorf("Expected second IP, got %s", ip2)
 		}
 	})
@@ -105,7 +108,7 @@ func TestIPAllocator_CIDR(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to allocate second IP from CIDR: %v", err)
 		}
-		if ip2 != "192.168.1.2" {
+		if ip2 != testRangeSecondIP {
 			t.Errorf("Expected 192.168.1.2, got %s", ip2)
 		}
 
@@ -214,7 +217,7 @@ func TestIPInRange(t *testing.T) {
 	})
 
 	t.Run("Single IP range no match", func(t *testing.T) {
-		if IPInRange("192.168.1.2", testRangeStartIP) {
+		if IPInRange(testRangeSecondIP, testRangeStartIP) {
 			t.Error("Expected 192.168.1.2 to NOT match single IP range 192.168.1.1")
 		}
 	})
@@ -345,7 +348,7 @@ func TestIPAllocator_ScanLimit(t *testing.T) {
 
 		// Exhaust the first maxScan addresses so the scan reaches the cap
 		// before it can reach the free .5 address.
-		for _, ip := range []string{testRangeStartIP, "192.168.1.2", "192.168.1.3", "192.168.1.4"} {
+		for _, ip := range []string{testRangeStartIP, testRangeSecondIP, "192.168.1.3", "192.168.1.4"} {
 			allocator.MarkUsed(ip)
 		}
 

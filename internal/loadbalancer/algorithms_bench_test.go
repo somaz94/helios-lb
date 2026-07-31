@@ -6,13 +6,16 @@ import (
 	"testing"
 )
 
+// benchServiceName is the service the benchmarks select backends for.
+const benchServiceName = "bench-svc"
+
 func newBenchBackends(n int) []*Backend {
 	backends := make([]*Backend, n)
 	for i := range backends {
 		b := &Backend{
 			Address:     fmt.Sprintf("10.0.0.%d", i+1),
 			Port:        8080,
-			ServiceName: "bench-svc",
+			ServiceName: benchServiceName,
 			Weight:      1,
 		}
 		atomic.StoreInt32(&b.healthy, 1)
@@ -28,7 +31,7 @@ func BenchmarkRoundRobin(b *testing.B) {
 			backends := newBenchBackends(n)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				algo.Select(backends, "bench-svc", "")
+				algo.Select(backends, benchServiceName, "")
 			}
 		})
 	}
@@ -45,7 +48,7 @@ func BenchmarkLeastConnection(b *testing.B) {
 			}
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				algo.Select(backends, "bench-svc", "")
+				algo.Select(backends, benchServiceName, "")
 			}
 		})
 	}
@@ -57,7 +60,7 @@ func BenchmarkWeightedRoundRobin(b *testing.B) {
 			weights := make([]Weight, n)
 			for i := range weights {
 				weights[i] = Weight{
-					ServiceName: "bench-svc",
+					ServiceName: benchServiceName,
 					Weight:      (i%5 + 1),
 				}
 			}
@@ -65,7 +68,7 @@ func BenchmarkWeightedRoundRobin(b *testing.B) {
 			backends := newBenchBackends(n)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				algo.Select(backends, "bench-svc", "")
+				algo.Select(backends, benchServiceName, "")
 			}
 		})
 	}
@@ -78,7 +81,7 @@ func BenchmarkIPHash(b *testing.B) {
 			backends := newBenchBackends(n)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				algo.Select(backends, "bench-svc", fmt.Sprintf("192.168.1.%d", i%256))
+				algo.Select(backends, benchServiceName, fmt.Sprintf("192.168.1.%d", i%256))
 			}
 		})
 	}
@@ -91,7 +94,7 @@ func BenchmarkRandom(b *testing.B) {
 			backends := newBenchBackends(n)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				algo.Select(backends, "bench-svc", "")
+				algo.Select(backends, benchServiceName, "")
 			}
 		})
 	}
@@ -104,7 +107,7 @@ func BenchmarkAllAlgorithms_Parallel(b *testing.B) {
 	algorithms := map[string]Algorithm{
 		"RoundRobin":         &roundRobinAlgorithm{},
 		"LeastConnection":    &leastConnectionAlgorithm{},
-		"WeightedRoundRobin": &weightedRoundRobinAlgorithm{weights: []Weight{{ServiceName: "bench-svc", Weight: 1}}},
+		"WeightedRoundRobin": &weightedRoundRobinAlgorithm{weights: []Weight{{ServiceName: benchServiceName, Weight: 1}}},
 		"IPHash":             &ipHashAlgorithm{},
 		"Random":             &randomAlgorithm{},
 	}
@@ -114,7 +117,7 @@ func BenchmarkAllAlgorithms_Parallel(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				i := 0
 				for pb.Next() {
-					algo.Select(backends, "bench-svc", fmt.Sprintf("10.0.0.%d", i%256))
+					algo.Select(backends, benchServiceName, fmt.Sprintf("10.0.0.%d", i%256))
 					i++
 				}
 			})

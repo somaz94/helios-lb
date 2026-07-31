@@ -12,9 +12,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// testHealthCheckProtocolHTTP is the HTTP probe protocol accepted by
-// HealthCheckConfig.Protocol; it additionally requires HTTPPath to be set.
-const testHealthCheckProtocolHTTP = "HTTP"
+// Fixture values shared across the webhook tests. Protocol and method values
+// are not here — those are the API contract and live in heliosconfig_types.go.
+const (
+	testConfigName    = "test"
+	testNewConfigName = "new-config"
+	testServiceName   = "svc1"
+	testNamespace     = "default"
+
+	testIP        = "192.168.1.1"
+	testIPv4      = "10.0.0.1"
+	testIPRange   = "10.0.0.1-10.0.0.10"
+	testIPv6      = "fd00::1"
+	testIPv6Range = "fd00::1-fd00::ff"
+)
 
 func TestValidateIPRange(t *testing.T) {
 	tests := []struct {
@@ -22,11 +33,11 @@ func TestValidateIPRange(t *testing.T) {
 		ipRange string
 		wantErr bool
 	}{
-		{"valid single IPv4", "192.168.1.1", false},
+		{"valid single IPv4", testIP, false},
 		{"valid IPv4 range", "192.168.1.1-192.168.1.10", false},
 		{"valid IPv4 CIDR", "192.168.1.0/24", false},
-		{"valid single IPv6", "fd00::1", false},
-		{"valid IPv6 range", "fd00::1-fd00::ff", false},
+		{"valid single IPv6", testIPv6, false},
+		{"valid IPv6 range", testIPv6Range, false},
 		{"valid IPv6 CIDR", "fd00::/120", false},
 		{"empty range", "", true},
 		{"invalid format", "not-an-ip", true},
@@ -54,7 +65,7 @@ func TestValidatePorts(t *testing.T) {
 	}{
 		{"valid ports", []PortConfig{{Port: 80}, {Port: 443}}, false},
 		{"empty ports", []PortConfig{}, false},
-		{"port with protocol", []PortConfig{{Port: 80, Protocol: "TCP"}}, false},
+		{"port with protocol", []PortConfig{{Port: 80, Protocol: ProtocolTCP}}, false},
 		{"port zero", []PortConfig{{Port: 0}}, true},
 		{"port too high", []PortConfig{{Port: 70000}}, true},
 		{"invalid protocol", []PortConfig{{Port: 80, Protocol: "SCTP"}}, true},
@@ -78,16 +89,16 @@ func TestValidateWeights(t *testing.T) {
 		method  string
 		wantErr bool
 	}{
-		{"no weights", nil, "RoundRobin", false},
-		{"valid weights", []WeightConfig{{ServiceName: "svc1", Weight: 5}}, "WeightedRoundRobin", false},
-		{"weights with wrong method", []WeightConfig{{ServiceName: "svc1", Weight: 5}}, "RoundRobin", true},
-		{"weight too low", []WeightConfig{{ServiceName: "svc1", Weight: 0}}, "WeightedRoundRobin", true},
-		{"weight too high", []WeightConfig{{ServiceName: "svc1", Weight: 101}}, "WeightedRoundRobin", true},
-		{"empty service name", []WeightConfig{{ServiceName: "", Weight: 5}}, "WeightedRoundRobin", true},
+		{"no weights", nil, MethodRoundRobin, false},
+		{"valid weights", []WeightConfig{{ServiceName: testServiceName, Weight: 5}}, MethodWeightedRoundRobin, false},
+		{"weights with wrong method", []WeightConfig{{ServiceName: testServiceName, Weight: 5}}, MethodRoundRobin, true},
+		{"weight too low", []WeightConfig{{ServiceName: testServiceName, Weight: 0}}, MethodWeightedRoundRobin, true},
+		{"weight too high", []WeightConfig{{ServiceName: testServiceName, Weight: 101}}, MethodWeightedRoundRobin, true},
+		{"empty service name", []WeightConfig{{ServiceName: "", Weight: 5}}, MethodWeightedRoundRobin, true},
 		{"duplicate service", []WeightConfig{
-			{ServiceName: "svc1", Weight: 5},
-			{ServiceName: "svc1", Weight: 10},
-		}, "WeightedRoundRobin", true},
+			{ServiceName: testServiceName, Weight: 5},
+			{ServiceName: testServiceName, Weight: 10},
+		}, MethodWeightedRoundRobin, true},
 	}
 
 	for _, tt := range tests {
@@ -107,10 +118,10 @@ func TestValidateHealthCheck(t *testing.T) {
 		wantErr bool
 	}{
 		{"nil config", nil, false},
-		{"valid TCP", &HealthCheckConfig{Protocol: "TCP"}, false},
-		{"valid HTTP", &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP, HTTPPath: "/health"}, false},
+		{"valid TCP", &HealthCheckConfig{Protocol: ProtocolTCP}, false},
+		{"valid HTTP", &HealthCheckConfig{Protocol: ProtocolHTTP, HTTPPath: "/health"}, false},
 		{"invalid protocol", &HealthCheckConfig{Protocol: "GRPC"}, true},
-		{"HTTP without path", &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP}, true},
+		{"HTTP without path", &HealthCheckConfig{Protocol: ProtocolHTTP}, true},
 	}
 
 	for _, tt := range tests {
@@ -129,11 +140,11 @@ func TestCompareIPs(t *testing.T) {
 		a, b string
 		want int
 	}{
-		{"equal IPv4", "192.168.1.1", "192.168.1.1", 0},
-		{"a < b IPv4", "192.168.1.1", "192.168.1.2", -1},
-		{"a > b IPv4", "192.168.1.2", "192.168.1.1", 1},
-		{"equal IPv6", "fd00::1", "fd00::1", 0},
-		{"a < b IPv6", "fd00::1", "fd00::2", -1},
+		{"equal IPv4", testIP, testIP, 0},
+		{"a < b IPv4", testIP, "192.168.1.2", -1},
+		{"a > b IPv4", "192.168.1.2", testIP, 1},
+		{"equal IPv6", testIPv6, testIPv6, 0},
+		{"a < b IPv6", testIPv6, "fd00::2", -1},
 	}
 
 	for _, tt := range tests {
@@ -163,8 +174,8 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("valid config", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
-			Spec:       HeliosConfigSpec{IPRange: "10.0.0.1-10.0.0.10", Method: "RoundRobin"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
+			Spec:       HeliosConfigSpec{IPRange: testIPRange, Method: MethodRoundRobin},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
 		if err != nil {
@@ -174,7 +185,7 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("invalid ipRange", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec:       HeliosConfigSpec{IPRange: "bad"},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -185,9 +196,9 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("invalid port", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange: "10.0.0.1",
+				IPRange: testIPv4,
 				Ports:   []PortConfig{{Port: 0}},
 			},
 		}
@@ -199,10 +210,10 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("invalid weights method mismatch", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange: "10.0.0.1",
-				Method:  "RoundRobin",
+				IPRange: testIPv4,
+				Method:  MethodRoundRobin,
 				Weights: []WeightConfig{{ServiceName: "svc", Weight: 1}},
 			},
 		}
@@ -214,10 +225,10 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("invalid health check", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange:     "10.0.0.1",
-				HealthCheck: &HealthCheckConfig{Protocol: testHealthCheckProtocolHTTP},
+				IPRange:     testIPv4,
+				HealthCheck: &HealthCheckConfig{Protocol: ProtocolHTTP},
 			},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -228,10 +239,10 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("valid config with ipv6Range", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange:   "10.0.0.1-10.0.0.10",
-				IPv6Range: "fd00::1-fd00::ff",
+				IPRange:   testIPRange,
+				IPv6Range: testIPv6Range,
 			},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -242,9 +253,9 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("invalid ipv6Range", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange:   "10.0.0.1",
+				IPRange:   testIPv4,
 				IPv6Range: "not-an-ipv6",
 			},
 		}
@@ -256,9 +267,9 @@ func TestValidateCreate(t *testing.T) {
 
 	t.Run("empty ipv6Range is allowed", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec: HeliosConfigSpec{
-				IPRange:   "10.0.0.1",
+				IPRange:   testIPv4,
 				IPv6Range: "",
 			},
 		}
@@ -274,13 +285,13 @@ func TestValidateUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	old := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "test"},
-		Spec:       HeliosConfigSpec{IPRange: "10.0.0.1"},
+		ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
+		Spec:       HeliosConfigSpec{IPRange: testIPv4},
 	}
 
 	t.Run("valid update", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec:       HeliosConfigSpec{IPRange: "10.0.0.1-10.0.0.5"},
 		}
 		_, err := v.ValidateUpdate(ctx, old, hc)
@@ -291,7 +302,7 @@ func TestValidateUpdate(t *testing.T) {
 
 	t.Run("invalid update", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
 			Spec:       HeliosConfigSpec{IPRange: "invalid"},
 		}
 		_, err := v.ValidateUpdate(ctx, old, hc)
@@ -304,8 +315,8 @@ func TestValidateUpdate(t *testing.T) {
 func TestValidateDelete(t *testing.T) {
 	v := &HeliosConfigValidator{Client: nil}
 	hc := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "test"},
-		Spec:       HeliosConfigSpec{IPRange: "10.0.0.1"},
+		ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
+		Spec:       HeliosConfigSpec{IPRange: testIPv4},
 	}
 	_, err := v.ValidateDelete(context.Background(), hc)
 	if err != nil {
@@ -319,10 +330,10 @@ func TestParseRange(t *testing.T) {
 		input   string
 		wantErr bool
 	}{
-		{"single IP", "10.0.0.1", false},
+		{"single IP", testIPv4, false},
 		{"range", "10.0.0.1-10.0.0.5", false},
 		{"CIDR", "10.0.0.0/24", false},
-		{"IPv6 single", "fd00::1", false},
+		{"IPv6 single", testIPv6, false},
 		{"IPv6 CIDR", "fd00::/120", false},
 		{"invalid", "bad", true},
 		{"invalid CIDR", "10.0.0.0/bad", true},
@@ -345,25 +356,25 @@ func TestParseRange(t *testing.T) {
 
 func TestDeepCopy(t *testing.T) {
 	hc := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: testConfigName, Namespace: testNamespace},
 		Spec: HeliosConfigSpec{
-			IPRange:           "10.0.0.1-10.0.0.10",
-			Method:            "RoundRobin",
-			Protocol:          "TCP",
-			Ports:             []PortConfig{{Port: 80, Protocol: "TCP"}, {Port: 443}},
-			Weights:           []WeightConfig{{ServiceName: "svc1", Weight: 5}},
-			NamespaceSelector: []string{"default", "production"},
+			IPRange:           testIPRange,
+			Method:            MethodRoundRobin,
+			Protocol:          ProtocolTCP,
+			Ports:             []PortConfig{{Port: 80, Protocol: ProtocolTCP}, {Port: 443}},
+			Weights:           []WeightConfig{{ServiceName: testServiceName, Weight: 5}},
+			NamespaceSelector: []string{testNamespace, "production"},
 			MaxAllocations:    10,
 			HealthCheck: &HealthCheckConfig{
 				Enabled:         true,
 				IntervalSeconds: 5,
 				TimeoutMs:       1000,
-				Protocol:        testHealthCheckProtocolHTTP,
+				Protocol:        ProtocolHTTP,
 				HTTPPath:        "/healthz",
 			},
 		},
 		Status: HeliosConfigStatus{
-			AllocatedIPs: map[string]string{"svc1": "10.0.0.1", "svc2": "10.0.0.2"},
+			AllocatedIPs: map[string]string{testServiceName: testIPv4, "svc2": "10.0.0.2"},
 			State:        StateActive,
 			Phase:        StateActive,
 			Message:      "OK",
@@ -433,13 +444,13 @@ func TestDeepCopy(t *testing.T) {
 
 	// Test WeightConfig DeepCopy
 	weightCopy := hc.Spec.Weights[0].DeepCopy()
-	if weightCopy.ServiceName != "svc1" {
+	if weightCopy.ServiceName != testServiceName {
 		t.Error("WeightConfig DeepCopy mismatch")
 	}
 
 	// Test HealthCheckConfig DeepCopy
 	hcCopy := hc.Spec.HealthCheck.DeepCopy()
-	if hcCopy.Protocol != testHealthCheckProtocolHTTP {
+	if hcCopy.Protocol != ProtocolHTTP {
 		t.Error("HealthCheckConfig DeepCopy mismatch")
 	}
 
@@ -484,8 +495,8 @@ func TestCheckIPRangeOverlap(t *testing.T) {
 	scheme := newTestScheme()
 
 	existing := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "existing", Namespace: "default"},
-		Spec:       HeliosConfigSpec{IPRange: "10.0.0.1-10.0.0.10"},
+		ObjectMeta: metav1.ObjectMeta{Name: "existing", Namespace: testNamespace},
+		Spec:       HeliosConfigSpec{IPRange: testIPRange},
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
@@ -494,7 +505,7 @@ func TestCheckIPRangeOverlap(t *testing.T) {
 
 	t.Run("overlapping range rejected", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			ObjectMeta: metav1.ObjectMeta{Name: testNewConfigName},
 			Spec:       HeliosConfigSpec{IPRange: "10.0.0.5-10.0.0.15"},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -505,7 +516,7 @@ func TestCheckIPRangeOverlap(t *testing.T) {
 
 	t.Run("non-overlapping range accepted", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			ObjectMeta: metav1.ObjectMeta{Name: testNewConfigName},
 			Spec:       HeliosConfigSpec{IPRange: "10.0.0.20-10.0.0.30"},
 		}
 		_, err := v.ValidateCreate(ctx, hc)
@@ -517,7 +528,7 @@ func TestCheckIPRangeOverlap(t *testing.T) {
 	t.Run("update excludes self", func(t *testing.T) {
 		hc := &HeliosConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: "existing"},
-			Spec:       HeliosConfigSpec{IPRange: "10.0.0.1-10.0.0.10"},
+			Spec:       HeliosConfigSpec{IPRange: testIPRange},
 		}
 		_, err := v.ValidateUpdate(ctx, existing, hc)
 		if err != nil {
@@ -530,10 +541,10 @@ func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
 	scheme := newTestScheme()
 
 	existing := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "existing-v6", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: "existing-v6", Namespace: testNamespace},
 		Spec: HeliosConfigSpec{
 			IPRange:   "10.1.0.1-10.1.0.10",
-			IPv6Range: "fd00::1-fd00::ff",
+			IPv6Range: testIPv6Range,
 		},
 	}
 
@@ -543,7 +554,7 @@ func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
 
 	t.Run("overlapping IPv6 range rejected despite disjoint IPv4", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			ObjectMeta: metav1.ObjectMeta{Name: testNewConfigName},
 			Spec: HeliosConfigSpec{
 				IPRange:   "10.2.0.1-10.2.0.10", // disjoint IPv4
 				IPv6Range: "fd00::80-fd00::1ff", // overlaps existing IPv6
@@ -557,7 +568,7 @@ func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
 
 	t.Run("non-overlapping IPv6 range accepted", func(t *testing.T) {
 		hc := &HeliosConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "new-config"},
+			ObjectMeta: metav1.ObjectMeta{Name: testNewConfigName},
 			Spec: HeliosConfigSpec{
 				IPRange:   "10.2.0.1-10.2.0.10",
 				IPv6Range: "fd00::1:0-fd00::1:ff", // disjoint from fd00::1-fd00::ff
@@ -574,7 +585,7 @@ func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "existing-v6"},
 			Spec: HeliosConfigSpec{
 				IPRange:   "10.1.0.1-10.1.0.10",
-				IPv6Range: "fd00::1-fd00::ff",
+				IPv6Range: testIPv6Range,
 			},
 		}
 		_, err := v.ValidateUpdate(ctx, existing, hc)
@@ -587,8 +598,8 @@ func TestCheckIPRangeOverlap_IPv6(t *testing.T) {
 func TestDeepCopy_EmptyStatus(t *testing.T) {
 	// Test status with nil AllocatedIPs and nil Conditions
 	hc := &HeliosConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "test"},
-		Spec:       HeliosConfigSpec{IPRange: "10.0.0.1"},
+		ObjectMeta: metav1.ObjectMeta{Name: testConfigName},
+		Spec:       HeliosConfigSpec{IPRange: testIPv4},
 		Status:     HeliosConfigStatus{},
 	}
 	copied := hc.DeepCopy()

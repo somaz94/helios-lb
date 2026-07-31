@@ -63,7 +63,7 @@ func TestReconcile_NotFound(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "nonexistent", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: "nonexistent", Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -85,7 +85,7 @@ func TestReconcile_GetError(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: "test", Namespace: nsDefault},
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -96,12 +96,12 @@ func TestReconcile_AddFinalizerError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-helios",
-			Namespace: "default",
+			Name:      nameTestHelios,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 
@@ -121,7 +121,7 @@ func TestReconcile_AddFinalizerError(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err == nil {
 		t.Fatal("expected error from finalizer update, got nil")
@@ -132,13 +132,13 @@ func TestReconcile_ListServicesError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 
@@ -158,7 +158,7 @@ func TestReconcile_ListServicesError(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err == nil {
 		t.Fatal("expected error from list services, got nil")
@@ -169,19 +169,19 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "192.168.1.100-192.168.1.100",
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -209,7 +209,7 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.100")
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	// Should return the IP allocation error (status update also fails but IP error comes first)
 	if err == nil {
@@ -221,19 +221,19 @@ func TestReconcile_ServiceUpdateRetryError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -262,7 +262,7 @@ func TestReconcile_ServiceUpdateRetryError(t *testing.T) {
 
 	// Should not return error because retry failure causes continue
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -276,19 +276,19 @@ func TestReconcile_ServiceStatusUpdateError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -314,7 +314,7 @@ func TestReconcile_ServiceStatusUpdateError(t *testing.T) {
 
 	// Service status update failure in retry causes continue, not error
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -328,19 +328,19 @@ func TestReconcile_HeliosStatusUpdateError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -369,7 +369,7 @@ func TestReconcile_HeliosStatusUpdateError(t *testing.T) {
 
 	// HeliosConfig status update error should now be returned
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err == nil {
 		t.Fatal("expected error from status update failure")
@@ -384,19 +384,19 @@ func TestHandleDeletion_WithAllocatedIPs(t *testing.T) {
 	now := metav1.Now()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-helios",
-			Namespace:         "default",
+			Name:              nameTestHelios,
+			Namespace:         nsDefault,
 			Finalizers:        []string{heliosConfigFinalizer},
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": testLoadBalancerIP,
-				"svc-2": "192.168.1.101",
+				nameSvc1: testLoadBalancerIP,
+				"svc-2":  "192.168.1.101",
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -410,7 +410,7 @@ func TestHandleDeletion_WithAllocatedIPs(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -425,18 +425,18 @@ func TestHandleDeletion_RemoveFinalizerError(t *testing.T) {
 	now := metav1.Now()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-helios",
-			Namespace:         "default",
+			Name:              nameTestHelios,
+			Namespace:         nsDefault,
 			Finalizers:        []string{heliosConfigFinalizer},
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": testLoadBalancerIP,
+				nameSvc1: testLoadBalancerIP,
 			},
 		},
 	}
@@ -459,7 +459,7 @@ func TestHandleDeletion_RemoveFinalizerError(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err == nil {
 		t.Fatal("expected error from remove finalizer, got nil")
@@ -471,14 +471,14 @@ func TestHandleDeletion_NoFinalizer(t *testing.T) {
 	now := metav1.Now()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-helios",
-			Namespace:         "default",
+			Name:              nameTestHelios,
+			Namespace:         nsDefault,
 			DeletionTimestamp: &now,
 			Finalizers:        []string{"other-finalizer"},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 
@@ -498,8 +498,8 @@ func TestFindLoadBalancerServices_WithService(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-helios",
-			Namespace: "default",
+			Name:      nameTestHelios,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
@@ -514,8 +514,8 @@ func TestFindLoadBalancerServices_WithService(t *testing.T) {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
@@ -526,7 +526,7 @@ func TestFindLoadBalancerServices_WithService(t *testing.T) {
 	if len(requests) != 1 {
 		t.Fatalf("expected 1 request, got %d", len(requests))
 	}
-	if requests[0].Name != "test-helios" {
+	if requests[0].Name != nameTestHelios {
 		t.Errorf("expected request for test-helios, got %s", requests[0].Name)
 	}
 }
@@ -536,16 +536,16 @@ func TestFindLoadBalancerServices_MultipleHeliosConfigs(t *testing.T) {
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helios-range-1",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.200",
+			IPRange: ipRangeWide,
 		},
 	}
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helios-range-2",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "10.0.0.1-10.0.0.100",
@@ -561,8 +561,8 @@ func TestFindLoadBalancerServices_MultipleHeliosConfigs(t *testing.T) {
 	// Service with IP in range 1 should only enqueue helios-range-1
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -582,7 +582,7 @@ func TestFindLoadBalancerServices_MultipleHeliosConfigs(t *testing.T) {
 	svc2 := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-svc-2",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -602,7 +602,7 @@ func TestFindLoadBalancerServices_MultipleHeliosConfigs(t *testing.T) {
 	svc3 := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-svc-3",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
@@ -624,8 +624,8 @@ func TestFindLoadBalancerServices_NoHeliosConfigs(t *testing.T) {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 	}
 
@@ -646,7 +646,7 @@ func TestFindLoadBalancerServices_NotAService(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-pod",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 	}
 
@@ -670,8 +670,8 @@ func TestFindLoadBalancerServices_ListError(t *testing.T) {
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 	}
 
@@ -685,19 +685,19 @@ func TestReconcile_SuccessfulIPAllocation(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -714,7 +714,7 @@ func TestReconcile_SuccessfulIPAllocation(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -725,7 +725,7 @@ func TestReconcile_SuccessfulIPAllocation(t *testing.T) {
 
 	// Verify service got IP
 	var updatedSvc corev1.Service
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc)
+	err = cl.Get(context.Background(), types.NamespacedName{Name: nameTestSvc, Namespace: nsDefault}, &updatedSvc)
 	if err != nil {
 		t.Fatalf("failed to get service: %v", err)
 	}
@@ -738,20 +738,20 @@ func TestReconcile_NoLBServices(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	// ClusterIP service - not LB
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:  corev1.ServiceTypeClusterIP,
@@ -767,7 +767,7 @@ func TestReconcile_NoLBServices(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -781,19 +781,19 @@ func TestReconcile_ServiceAlreadyHasIngress(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -815,7 +815,7 @@ func TestReconcile_ServiceAlreadyHasIngress(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -829,13 +829,13 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	metallbClass := "metallb"
@@ -843,7 +843,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 	otherLBSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "metallb-svc",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:              corev1.ServiceTypeLoadBalancer,
@@ -861,7 +861,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -872,7 +872,7 @@ func TestReconcile_SkipsOtherLBClassServices(t *testing.T) {
 
 	// Verify the other LB's service was NOT modified
 	var svc corev1.Service
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "metallb-svc", Namespace: "default"}, &svc)
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "metallb-svc", Namespace: nsDefault}, &svc)
 	if err != nil {
 		t.Fatalf("failed to get service: %v", err)
 	}
@@ -891,19 +891,19 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 	heliosClass := balancerv1.LoadBalancerClassHelios
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "helios-svc",
-			Namespace: "default",
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:              corev1.ServiceTypeLoadBalancer,
@@ -921,7 +921,7 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -932,7 +932,7 @@ func TestReconcile_IncludesHeliosLBClassService(t *testing.T) {
 
 	// Verify helios-lb class service WAS processed
 	var updatedSvc corev1.Service
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "helios-svc", Namespace: "default"}, &updatedSvc)
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "helios-svc", Namespace: nsDefault}, &updatedSvc)
 	if err != nil {
 		t.Fatalf("failed to get service: %v", err)
 	}
@@ -945,19 +945,19 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "192.168.1.100-192.168.1.101",
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -978,7 +978,7 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.101")
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	// Should requeue instead of returning error (retryable error pattern)
 	if err != nil {
@@ -990,7 +990,7 @@ func TestReconcile_IPAllocationError_StatusUpdateSucceeds(t *testing.T) {
 
 	// Verify the HeliosConfig status was updated to Failed
 	var updated balancerv1.HeliosConfig
-	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updated); getErr != nil {
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault}, &updated); getErr != nil {
 		t.Fatalf("failed to get HeliosConfig: %v", getErr)
 	}
 	if updated.Status.Phase != balancerv1.StateFailed {
@@ -1006,18 +1006,18 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 	now := metav1.Now()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-helios",
-			Namespace:         "default",
+			Name:              nameTestHelios,
+			Namespace:         nsDefault,
 			Finalizers:        []string{heliosConfigFinalizer},
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "192.168.1.100-192.168.1.101",
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": testLoadBalancerIP,
+				nameSvc1: testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1026,8 +1026,8 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 	// Create the service that exists - so the Get in handleDeletion succeeds
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-1",
-			Namespace: "default",
+			Name:      nameSvc1,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:  corev1.ServiceTypeLoadBalancer,
@@ -1048,7 +1048,7 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1059,7 +1059,7 @@ func TestHandleDeletion_WithServiceIngressClearing(t *testing.T) {
 
 	// Verify the service's ingress was cleared
 	var updatedSvc corev1.Service
-	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "svc-1", Namespace: "default"}, &updatedSvc); getErr != nil {
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameSvc1, Namespace: nsDefault}, &updatedSvc); getErr != nil {
 		t.Fatalf("failed to get service: %v", getErr)
 	}
 	if len(updatedSvc.Status.LoadBalancer.Ingress) != 0 {
@@ -1072,18 +1072,18 @@ func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
 	now := metav1.Now()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-helios",
-			Namespace:         "default",
+			Name:              nameTestHelios,
+			Namespace:         nsDefault,
 			Finalizers:        []string{heliosConfigFinalizer},
 			DeletionTimestamp: &now,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-1": testLoadBalancerIP,
+				nameSvc1: testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1092,8 +1092,8 @@ func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
 	// Create the service so Get succeeds
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-1",
-			Namespace: "default",
+			Name:      nameSvc1,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:  corev1.ServiceTypeLoadBalancer,
@@ -1123,7 +1123,7 @@ func TestHandleDeletion_ServiceIngressClearError(t *testing.T) {
 
 	// Should not fail - the error is just logged
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1137,19 +1137,19 @@ func TestReconcile_ServiceUpdateError(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: testLoadBalancerIP,
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -1175,7 +1175,7 @@ func TestReconcile_ServiceUpdateError(t *testing.T) {
 
 	// Service update error in retry causes continue, should not fail reconcile
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1190,19 +1190,19 @@ func TestReconcile_NamespaceSelector(t *testing.T) {
 
 	heliosConfig := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange:           "10.0.0.1-10.0.0.10",
-			NamespaceSelector: []string{"allowed-ns"},
+			IPRange:           ipRange10Net,
+			NamespaceSelector: []string{nsAllowed},
 		},
 	}
 
 	// Service in allowed namespace - should get IP
 	allowedSvc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "svc-allowed", Namespace: "allowed-ns"},
+		ObjectMeta: metav1.ObjectMeta{Name: "svc-allowed", Namespace: nsAllowed},
 		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 	}
 	// Service in non-allowed namespace - should be skipped
@@ -1219,7 +1219,7 @@ func TestReconcile_NamespaceSelector(t *testing.T) {
 
 	r := newTestReconciler(cl)
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1227,7 +1227,7 @@ func TestReconcile_NamespaceSelector(t *testing.T) {
 
 	// Verify allowed service got an IP
 	var updatedAllowed corev1.Service
-	if err := cl.Get(context.Background(), types.NamespacedName{Name: "svc-allowed", Namespace: "allowed-ns"}, &updatedAllowed); err != nil {
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: "svc-allowed", Namespace: nsAllowed}, &updatedAllowed); err != nil {
 		t.Fatalf("failed to get allowed service: %v", err)
 	}
 	if len(updatedAllowed.Status.LoadBalancer.Ingress) == 0 {
@@ -1249,22 +1249,22 @@ func TestReconcile_MaxAllocations(t *testing.T) {
 
 	heliosConfig := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange:        "10.0.0.1-10.0.0.10",
+			IPRange:        ipRange10Net,
 			MaxAllocations: 1,
 		},
 	}
 
 	svc1 := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "svc1", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: "svc1", Namespace: nsDefault},
 		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 	}
 	svc2 := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "svc2", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: "svc2", Namespace: nsDefault},
 		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 	}
 
@@ -1278,7 +1278,7 @@ func TestReconcile_MaxAllocations(t *testing.T) {
 
 	// First reconcile should allocate 1 IP then stop due to maxAllocations
 	_, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1286,7 +1286,7 @@ func TestReconcile_MaxAllocations(t *testing.T) {
 
 	// Check the HeliosConfig status
 	var updatedConfig balancerv1.HeliosConfig
-	if err := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updatedConfig); err != nil {
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault}, &updatedConfig); err != nil {
 		t.Fatalf("failed to get helios config: %v", err)
 	}
 
@@ -1300,17 +1300,17 @@ func TestReconcile_IPConflictDetected(t *testing.T) {
 	// Config 1: already has an allocated IP in the range
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "helios-1",
-			Namespace:  "default",
+			Name:       nameHelios1,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.110",
-			Method:  "RoundRobin",
+			IPRange: ipRangeNarrow,
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": testLoadBalancerIP,
+				nameSvcA: testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1318,13 +1318,13 @@ func TestReconcile_IPConflictDetected(t *testing.T) {
 	// Config 2: overlapping range - should detect conflict
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "helios-2",
-			Namespace:  "default",
+			Name:       nameHelios2,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "192.168.1.100-192.168.1.120",
-			Method:  "RoundRobin",
+			Method:  methodRoundRobin,
 		},
 	}
 
@@ -1336,7 +1336,7 @@ func TestReconcile_IPConflictDetected(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "helios-2", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameHelios2, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1348,7 +1348,7 @@ func TestReconcile_IPConflictDetected(t *testing.T) {
 
 	// Verify Degraded condition was set
 	var updated balancerv1.HeliosConfig
-	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "helios-2", Namespace: "default"}, &updated); getErr != nil {
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameHelios2, Namespace: nsDefault}, &updated); getErr != nil {
 		t.Fatalf("failed to get HeliosConfig: %v", getErr)
 	}
 	foundDegraded := false
@@ -1368,17 +1368,17 @@ func TestReconcile_NoIPConflict_NonOverlappingRanges(t *testing.T) {
 	// Config 1: range 192.168.1.100-110
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "helios-1",
-			Namespace:  "default",
+			Name:       nameHelios1,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.110",
-			Method:  "RoundRobin",
+			IPRange: ipRangeNarrow,
+			Method:  methodRoundRobin,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": testLoadBalancerIP,
+				nameSvcA: testLoadBalancerIP,
 			},
 			Phase: balancerv1.StateActive,
 		},
@@ -1386,13 +1386,13 @@ func TestReconcile_NoIPConflict_NonOverlappingRanges(t *testing.T) {
 	// Config 2: non-overlapping range
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "helios-2",
-			Namespace:  "default",
+			Name:       nameHelios2,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "10.0.0.1-10.0.0.10",
-			Method:  "RoundRobin",
+			IPRange: ipRange10Net,
+			Method:  methodRoundRobin,
 		},
 	}
 
@@ -1404,7 +1404,7 @@ func TestReconcile_NoIPConflict_NonOverlappingRanges(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "helios-2", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameHelios2, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1419,23 +1419,23 @@ func TestCheckIPConflicts_DetectsOverlap(t *testing.T) {
 	scheme := newTestScheme()
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helios-1",
-			Namespace: "default",
+			Name:      nameHelios1,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.200",
+			IPRange: ipRangeWide,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": "192.168.1.105",
-				"svc-b": "192.168.1.110",
+				nameSvcA: "192.168.1.105",
+				"svc-b":  "192.168.1.110",
 			},
 		},
 	}
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helios-2",
-			Namespace: "default",
+			Name:      nameHelios2,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
 			IPRange: "192.168.1.100-192.168.1.120",
@@ -1472,25 +1472,25 @@ func TestCheckIPConflicts_NoConflict(t *testing.T) {
 	scheme := newTestScheme()
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helios-1",
-			Namespace: "default",
+			Name:      nameHelios1,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "10.0.0.1-10.0.0.10",
+			IPRange: ipRange10Net,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": "10.0.0.5",
+				nameSvcA: "10.0.0.5",
 			},
 		},
 	}
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helios-2",
-			Namespace: "default",
+			Name:      nameHelios2,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.200",
+			IPRange: ipRangeWide,
 		},
 	}
 
@@ -1519,33 +1519,33 @@ func TestAllocateAndAssign_SkipsOtherConfigIPs(t *testing.T) {
 	// helios-1 has .100 allocated
 	helios1 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helios-1",
-			Namespace: "default",
+			Name:      nameHelios1,
+			Namespace: nsDefault,
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.110",
+			IPRange: ipRangeNarrow,
 		},
 		Status: balancerv1.HeliosConfigStatus{
 			AllocatedIPs: map[string]string{
-				"svc-a": testLoadBalancerIP,
+				nameSvcA: testLoadBalancerIP,
 			},
 		},
 	}
 	// helios-2 uses overlapping range
 	helios2 := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "helios-2",
-			Namespace:  "default",
+			Name:       nameHelios2,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange: "192.168.1.100-192.168.1.110",
+			IPRange: ipRangeNarrow,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:  corev1.ServiceTypeLoadBalancer,
@@ -1584,19 +1584,19 @@ func TestAllocateAndAssign_DualStack(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange:   "192.168.1.100-192.168.1.110",
+			IPRange:   ipRangeNarrow,
 			IPv6Range: "fd00::1-fd00::10",
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:  corev1.ServiceTypeLoadBalancer,
@@ -1631,7 +1631,7 @@ func TestAllocateAndAssign_DualStack(t *testing.T) {
 
 	// Verify service got both IPs in ingress
 	var updatedSvc corev1.Service
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc)
+	err = cl.Get(context.Background(), types.NamespacedName{Name: nameTestSvc, Namespace: nsDefault}, &updatedSvc)
 	if err != nil {
 		t.Fatalf("failed to get service: %v", err)
 	}
@@ -1650,8 +1650,8 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
@@ -1660,8 +1660,8 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -1697,7 +1697,7 @@ func TestAllocateAndAssign_SingleStack(t *testing.T) {
 
 	// Verify service got only 1 ingress entry
 	var updatedSvc corev1.Service
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc)
+	err = cl.Get(context.Background(), types.NamespacedName{Name: nameTestSvc, Namespace: nsDefault}, &updatedSvc)
 	if err != nil {
 		t.Fatalf("failed to get service: %v", err)
 	}
@@ -1710,24 +1710,24 @@ func TestReconcile_DualStack(t *testing.T) {
 	scheme := newTestScheme()
 	helios := &balancerv1.HeliosConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-helios",
-			Namespace:  "default",
+			Name:       nameTestHelios,
+			Namespace:  nsDefault,
 			Finalizers: []string{heliosConfigFinalizer},
 		},
 		Spec: balancerv1.HeliosConfigSpec{
-			IPRange:   "172.16.0.100",
+			IPRange:   testSingleIP,
 			IPv6Range: "fd00::100",
-			Method:    "RoundRobin",
+			Method:    methodRoundRobin,
 		},
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-svc",
-			Namespace: "default",
+			Name:      nameTestSvc,
+			Namespace: nsDefault,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			LoadBalancerIP: "172.16.0.100",
+			LoadBalancerIP: testSingleIP,
 			Ports:          []corev1.ServicePort{{Port: 80}},
 		},
 	}
@@ -1740,7 +1740,7 @@ func TestReconcile_DualStack(t *testing.T) {
 	r := newTestReconciler(cl)
 
 	result, err := r.Reconcile(context.Background(), reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: "test-helios", Namespace: "default"},
+		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -1751,19 +1751,19 @@ func TestReconcile_DualStack(t *testing.T) {
 
 	// Verify HeliosConfig status has both IPv4 and IPv6
 	var updated balancerv1.HeliosConfig
-	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-helios", Namespace: "default"}, &updated); getErr != nil {
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault}, &updated); getErr != nil {
 		t.Fatalf("failed to get HeliosConfig: %v", getErr)
 	}
-	if updated.Status.AllocatedIPs["test-svc"] != "172.16.0.100" {
-		t.Errorf("expected IPv4 172.16.0.100, got %s", updated.Status.AllocatedIPs["test-svc"])
+	if updated.Status.AllocatedIPs[nameTestSvc] != testSingleIP {
+		t.Errorf("expected IPv4 172.16.0.100, got %s", updated.Status.AllocatedIPs[nameTestSvc])
 	}
-	if updated.Status.AllocatedIPv6s["test-svc"] != "fd00::100" {
-		t.Errorf("expected IPv6 fd00::100, got %s", updated.Status.AllocatedIPv6s["test-svc"])
+	if updated.Status.AllocatedIPv6s[nameTestSvc] != "fd00::100" {
+		t.Errorf("expected IPv6 fd00::100, got %s", updated.Status.AllocatedIPv6s[nameTestSvc])
 	}
 
 	// Verify service has dual-stack ingress
 	var updatedSvc corev1.Service
-	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: "test-svc", Namespace: "default"}, &updatedSvc); getErr != nil {
+	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameTestSvc, Namespace: nsDefault}, &updatedSvc); getErr != nil {
 		t.Fatalf("failed to get service: %v", getErr)
 	}
 	if len(updatedSvc.Status.LoadBalancer.Ingress) != 2 {
