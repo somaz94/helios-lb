@@ -78,11 +78,11 @@ The following table lists the configurable parameters of the helios-lb chart and
 | `webhook.certManager.issuerName` | cert-manager Issuer name | `helios-lb-selfsigned-issuer` |
 | `customresource.basic.enabled` | Enable basic load balancer configuration | `false` |
 | `customresource.basic.name` | Basic configuration name | `heliosconfig-basic` |
-| `customresource.basic.ipRange` | IP range for basic configuration | `10.10.10.65` |
+| `customresource.basic.ipRange` | IP range for basic configuration | `192.0.2.65` |
 | `customresource.basic.method` | Load balancing method for basic configuration | `RoundRobin` |
 | `customresource.port.enabled` | Enable port configuration | `false` |
 | `customresource.port.name` | Port configuration name | `heliosconfig-port` |
-| `customresource.port.ipRange` | IP range for port configuration | `10.10.10.65` |
+| `customresource.port.ipRange` | IP range for port configuration | `192.0.2.65` |
 | `customresource.port.method` | Load balancing method for port configuration | `RoundRobin` |
 | `customresource.port.ports` | Ports configuration | `[{port: 80}, {port: 443}]` |
 
@@ -96,7 +96,7 @@ customresource:
   basic:
     enabled: true
     name: "heliosconfig-basic"
-    ipRange: "10.10.10.65"
+    ipRange: "192.0.2.65"
     method: "RoundRobin"
 ```
 
@@ -106,7 +106,7 @@ customresource:
   port:
     enabled: true
     name: "heliosconfig-port"
-    ipRange: "10.10.10.65"
+    ipRange: "192.0.2.65"
     method: "RoundRobin"
     ports:
       - port: 80
@@ -144,7 +144,7 @@ kind: HeliosConfig
 metadata:
   name: heliosconfig-sample
 spec:
-  ipRange: "10.10.10.65"
+  ipRange: "192.0.2.65"
   method: RoundRobin
   ports:
     - port: 80

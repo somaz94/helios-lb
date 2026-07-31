@@ -4,7 +4,7 @@ metadata:
   name: heliosconfig-sample-port
 spec:
   # IPv6 supported: fd00::1, fd00::1-fd00::ff, fd00::/120
-  ipRange: "10.10.10.65"
+  ipRange: "192.0.2.65"
   method: RoundRobin  # Optional: RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:
     - port: 80

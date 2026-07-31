@@ -104,7 +104,7 @@ customresource:
   basic:
     enabled: false
     name: "heliosconfig-basic"
-    ipRange: "10.10.10.65"
+    ipRange: "192.0.2.65"
     # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     method: "RoundRobin"
     # namespaceSelector: []  # Optional: restrict to specific namespaces
@@ -113,7 +113,7 @@ customresource:
   port:
     enabled: false
     name: "heliosconfig-port"
-    ipRange: "10.10.10.65"
+    ipRange: "192.0.2.65"
     # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     method: "RoundRobin"
     ports:
@@ -125,7 +125,7 @@ customresource:
   weight:
     enabled: false
     name: "heliosconfig-weight"
-    ipRange: "10.10.10.65"
+    ipRange: "192.0.2.65"
     # ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
     ports:
       - port: 80

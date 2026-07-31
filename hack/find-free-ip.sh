@@ -4,7 +4,7 @@ set -euo pipefail
 # Find free (unused) IPs in a given subnet for helios-lb testing
 #
 # Usage:
-#   ./hack/find-free-ip.sh                          # Scan 10.10.10.100-110 (default)
+#   ./hack/find-free-ip.sh                          # Scan 192.0.2.100-110 (default)
 #   ./hack/find-free-ip.sh 192.168.1.100 192.168.1.110   # Custom range
 #   ./hack/find-free-ip.sh 172.30.0.50 172.30.0.60 3     # Find 3 free IPs
 #
@@ -23,15 +23,15 @@ usage() {
   echo "Scan a range of IPs and find unused ones for helios-lb testing."
   echo ""
   echo "Arguments:"
-  echo "  START_IP    First IP to scan (default: 10.10.10.100)"
-  echo "  END_IP      Last IP to scan  (default: 10.10.10.110)"
+  echo "  START_IP    First IP to scan (default: 192.0.2.100)"
+  echo "  END_IP      Last IP to scan  (default: 192.0.2.110)"
   echo "  COUNT       Number of free IPs needed (default: 2)"
   echo ""
   echo "Environment variables:"
   echo "  SCAN_TIMEOUT  Ping timeout in seconds (default: 1)"
   echo ""
   echo "Examples:"
-  echo "  $0                                      # Scan 10.10.10.100-110"
+  echo "  $0                                      # Scan 192.0.2.100-110"
   echo "  $0 192.168.1.100 192.168.1.120          # Custom range"
   echo "  $0 172.30.0.50 172.30.0.70 3            # Find 3 free IPs"
   echo ""
@@ -47,8 +47,8 @@ case "${1:-}" in
   -h|--help|help) usage ;;
 esac
 
-START_IP="${1:-10.10.10.100}"
-END_IP="${2:-10.10.10.110}"
+START_IP="${1:-192.0.2.100}"
+END_IP="${2:-192.0.2.110}"
 NEED_COUNT="${3:-2}"
 SCAN_TIMEOUT="${SCAN_TIMEOUT:-1}"
 

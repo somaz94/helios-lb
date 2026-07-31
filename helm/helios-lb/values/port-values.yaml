@@ -2,7 +2,7 @@ customresource:
   port:
     enabled: true
     name: "heliosconfig-port"
-    ipRange: "10.10.10.65" # Change ipRange
+    ipRange: "192.0.2.65" # Change ipRange
     method: "RoundRobin"
     ports:
       - port: 80

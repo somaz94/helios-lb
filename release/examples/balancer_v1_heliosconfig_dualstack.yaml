@@ -4,7 +4,7 @@ metadata:
   name: heliosconfig-dualstack
 spec:
   # IPv4 range for allocation
-  ipRange: "10.10.10.65"
+  ipRange: "192.0.2.65"
   # IPv6 range for dual-stack allocation
   # When both ipRange and ipv6Range are set, services receive both IPv4 and IPv6 addresses
   ipv6Range: "fd00::1"

@@ -2,5 +2,5 @@ customresource:
   basic:
     enabled: true
     name: "heliosconfig-basic"
-    ipRange: "10.10.10.65" # Change ipRange
+    ipRange: "192.0.2.65" # Change ipRange
     method: "RoundRobin"

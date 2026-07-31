@@ -16,7 +16,7 @@ RELEASE_NAME="hlb-test"
 NAMESPACE="helios-lb-system"
 
 # Configurable test IP via environment variable
-TEST_IP="${TEST_IP:-10.10.10.100}"
+TEST_IP="${TEST_IP:-192.0.2.100}"
 TEST_IPV6="${TEST_IPV6:-fd00::100}"
 
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }

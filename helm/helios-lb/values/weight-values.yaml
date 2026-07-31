@@ -2,7 +2,7 @@ customresource:
   weight:
     enabled: true
     name: "heliosconfig-weight"
-    ipRange: "10.10.10.65" # Change ipRange
+    ipRange: "192.0.2.65" # Change ipRange
     ports:
       - port: 80
       - port: 443

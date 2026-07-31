@@ -16,11 +16,11 @@ SAMPLES_DIR="config/samples"
 
 # Configurable test IPs via environment variables
 # Override with: TEST_IP=172.30.0.100 TEST_IP2=172.30.0.101 TEST_IP_RANGE=172.30.0.100-172.30.0.110 make test-integration
-TEST_IP="${TEST_IP:-10.10.10.100}"
-TEST_IP2="${TEST_IP2:-10.10.10.101}"
-TEST_IP_RANGE="${TEST_IP_RANGE:-10.10.10.100-10.10.10.110}"
+TEST_IP="${TEST_IP:-192.0.2.100}"
+TEST_IP2="${TEST_IP2:-192.0.2.101}"
+TEST_IP_RANGE="${TEST_IP_RANGE:-192.0.2.100-192.0.2.110}"
 TEST_IPV6="${TEST_IPV6:-fd00::100}"
-TEST_IP_CONFLICT="${TEST_IP_CONFLICT:-10.10.10.100}"
+TEST_IP_CONFLICT="${TEST_IP_CONFLICT:-192.0.2.100}"
 
 log_info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }

@@ -81,7 +81,7 @@ Helios Load Balancer can coexist with MetalLB in the same cluster if properly co
    metadata:
      name: heliosconfig-sample
    spec:
-     ipRange: "10.10.10.65"  # Helios-LB range
+     ipRange: "192.0.2.65"  # Helios-LB range
    ```
 
 2. When creating a LoadBalancer service, specify which load balancer should handle it by using the appropriate IP range:
@@ -104,7 +104,7 @@ Helios Load Balancer can coexist with MetalLB in the same cluster if properly co
      name: helios-service
    spec:
      type: LoadBalancer
-     loadBalancerIP: "10.10.10.65"  # Helios-LB range
+     loadBalancerIP: "192.0.2.65"  # Helios-LB range
    ```
 
 This way, you can leverage both load balancers in your cluster, each managing its own IP range.
@@ -190,7 +190,7 @@ metadata:
 spec:
   # IP range for virtual IP allocation (CIDR or range format) default port: 80 & default protocol: tcp
   # Supports: single IP, range (192.168.1.100-200), CIDR (192.168.1.0/24), IPv6 (fd00::1, fd00::/120)
-  ipRange: "10.10.10.65"
+  ipRange: "192.0.2.65"
   ipv6Range: "fd00::1"  # Optional: enables dual-stack (IPv4 + IPv6)
   method: RoundRobin  # RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random
   ports:              # Optional: default is 80
@@ -255,7 +255,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.65"
+  loadBalancerIP: "192.0.2.65"
   ports:
   - port: 80
     targetPort: 80
@@ -277,7 +277,7 @@ Check the service status:
 kubectl get svc nginx-test
 ...
 NAME         TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)        AGE
-nginx-test   LoadBalancer   10.233.32.189   10.10.10.65   80:30396/TCP   2s
+nginx-test   LoadBalancer   10.96.0.189     192.0.2.65      80:30396/TCP   2s
 
 k get heliosconfigs
 NAME                       PHASE    MESSAGE                     AGE
@@ -399,7 +399,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb  # Specifies that Helios-LB should handle this service
-  loadBalancerIP: "10.10.10.65"
+  loadBalancerIP: "192.0.2.65"
   ports:
   - port: 80
     targetPort: 80

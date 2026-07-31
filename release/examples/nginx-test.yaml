@@ -34,7 +34,7 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: helios-lb
-  loadBalancerIP: "10.10.10.65"
+  loadBalancerIP: "192.0.2.65"
   ports:
   - port: 80
     targetPort: 80
