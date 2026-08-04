@@ -236,6 +236,79 @@ var _ = Describe("Manager", Ordered, func() {
 
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 
+		It("should assign exactly the loadBalancerIP a Service asked for", func() {
+			// requestedIP is deliberately NOT the first address in the range:
+			// drawing from the pool would yield poolFirstIP, so this only passes
+			// when the Service's request is actually honored.
+			const (
+				ipRange     = "192.0.2.10-192.0.2.20"
+				poolFirstIP = "192.0.2.10"
+				requestedIP = "192.0.2.17"
+				configName  = "e2e-requested-ip"
+				svcName     = "e2e-requested-ip-svc"
+			)
+
+			manifest := fmt.Sprintf(`apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  ipRange: "%s"
+  method: RoundRobin
+  namespaceSelector: ["%s"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  type: LoadBalancer
+  loadBalancerClass: helios-lb
+  loadBalancerIP: "%s"
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: %s
+`, configName, namespace, ipRange, namespace, svcName, namespace, requestedIP, svcName)
+
+			dir, err := os.MkdirTemp("", "helios-e2e-requested-ip")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { _ = os.RemoveAll(dir) })
+
+			manifestPath := filepath.Join(dir, "requested-ip.yaml")
+			Expect(os.WriteFile(manifestPath, []byte(manifest), 0o600)).To(Succeed())
+
+			By("applying a HeliosConfig and a Service that requests a specific IP")
+			cmd := exec.Command("kubectl", "apply", "-f", manifestPath)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply the requested-IP fixtures")
+			DeferCleanup(func() {
+				cmd := exec.Command("kubectl", "delete", "-f", manifestPath, "--ignore-not-found")
+				_, _ = utils.Run(cmd)
+			})
+
+			By("waiting for the Service to receive an ingress address")
+			var assigned string
+			verifyAssigned := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "service", svcName,
+					"-n", namespace,
+					"-o", "jsonpath={.status.loadBalancer.ingress[0].ip}")
+				out, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(out).NotTo(BeEmpty(), "no ingress IP assigned yet")
+				assigned = out
+			}
+			Eventually(verifyAssigned, 2*time.Minute, 2*time.Second).Should(Succeed())
+
+			By("checking the assigned address is the requested one, not the pool's first")
+			Expect(assigned).To(Equal(requestedIP),
+				"the Service asked for %s but got %s; the pool's first address is %s, "+
+					"so the request was ignored", requestedIP, assigned, poolFirstIP)
+		})
+
 		// TODO: Customize the e2e test suite with scenarios specific to your project.
 		// Consider applying sample/CR(s) and check their status and/or verifying
 		// the reconciliation by using the metrics, i.e.:
