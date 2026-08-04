@@ -285,10 +285,18 @@ spec:
 			cmd := exec.Command("kubectl", "apply", "-f", manifestPath)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply the requested-IP fixtures")
-			DeferCleanup(func() {
-				cmd := exec.Command("kubectl", "delete", "-f", manifestPath, "--ignore-not-found")
-				_, _ = utils.Run(cmd)
-			})
+
+			// The HeliosConfig carries a finalizer, so it has to be removed while
+			// the controller is still running. Leaving it to a later cleanup would
+			// let the suite tear the controller down first, and the delete would
+			// then block forever with nobody left to clear the finalizer.
+			defer func() {
+				cmd := exec.Command("kubectl", "delete", "-f", manifestPath,
+					"--ignore-not-found", "--wait=true", "--timeout=90s")
+				if _, err := utils.Run(cmd); err != nil {
+					AddReportEntry("requested-IP fixture cleanup failed", err.Error())
+				}
+			}()
 
 			By("waiting for the Service to receive an ingress address")
 			var assigned string
