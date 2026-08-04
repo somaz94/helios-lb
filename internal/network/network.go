@@ -15,6 +15,12 @@ func (nm *NetworkManager) AllocateIP(ipRange string) (string, error) {
 	return nm.ipAllocator.AllocateIP(ipRange)
 }
 
+// AllocateSpecificIP allocates exactly the requested IP from the given range,
+// failing rather than substituting another address.
+func (nm *NetworkManager) AllocateSpecificIP(ipRange, requested string) (string, error) {
+	return nm.ipAllocator.AllocateSpecificIP(ipRange, requested)
+}
+
 // MarkUsed marks an IP as used to prevent conflict during allocation.
 func (nm *NetworkManager) MarkUsed(ip string) {
 	nm.ipAllocator.MarkUsed(ip)

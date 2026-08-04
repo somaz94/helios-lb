@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
+	"strings"
 
 	"github.com/go-logr/logr"
 	balancerv1 "github.com/somaz94/helios-lb/api/v1"
@@ -20,6 +22,30 @@ type IPManager struct {
 	Client     client.Client
 	NetworkMgr *network.NetworkManager
 	Metrics    *metrics.MetricsRecorder
+}
+
+// splitRequestedIP routes a spec.loadBalancerIP value to the address family it
+// belongs to. The field holds one value, so at most one family is pinned; an
+// empty or unparseable value pins neither and both come from the pool.
+func splitRequestedIP(requested string) (v4, v6 string) {
+	trimmed := strings.TrimSpace(requested)
+	ip := net.ParseIP(trimmed)
+	if ip == nil {
+		return "", ""
+	}
+	if ip.To4() != nil {
+		return trimmed, ""
+	}
+	return "", trimmed
+}
+
+// allocateIP honors a requested address when one was given, otherwise takes the
+// next free address from the range.
+func (m *IPManager) allocateIP(ipRange, requested string) (string, error) {
+	if requested == "" {
+		return m.NetworkMgr.AllocateIP(ipRange)
+	}
+	return m.NetworkMgr.AllocateSpecificIP(ipRange, requested)
 }
 
 // AllocateAndAssign allocates an IP from the config's range and assigns it to the service.
@@ -49,8 +75,13 @@ func (m *IPManager) AllocateAndAssign(
 		}
 	}
 
+	// A Service may ask for a specific address through spec.loadBalancerIP. The
+	// field holds a single value, so it pins at most one address family; the
+	// other one, on a dual-stack config, still comes from the pool.
+	requestedV4, requestedV6 := splitRequestedIP(svc.Spec.LoadBalancerIP)
+
 	// Allocate IPv4
-	ip, err := m.NetworkMgr.AllocateIP(heliosConfig.Spec.IPRange)
+	ip, err := m.allocateIP(heliosConfig.Spec.IPRange, requestedV4)
 	if err != nil {
 		return "", "", NewRetryableError("IPv4 allocation failed", err)
 	}
@@ -58,7 +89,7 @@ func (m *IPManager) AllocateAndAssign(
 	// Allocate IPv6 if dual-stack
 	var ipv6 string
 	if heliosConfig.Spec.IPv6Range != "" {
-		ipv6, err = m.NetworkMgr.AllocateIP(heliosConfig.Spec.IPv6Range)
+		ipv6, err = m.allocateIP(heliosConfig.Spec.IPv6Range, requestedV6)
 		if err != nil {
 			m.NetworkMgr.ReleaseIP(ip)
 			return "", "", NewRetryableError("IPv6 allocation failed", err)

@@ -205,15 +205,21 @@ func TestReconcile_IPAllocationError_StatusUpdateFails(t *testing.T) {
 		Build()
 	r := newTestReconciler(cl)
 
-	// Pre-allocate the only IP in range so AllocateIP returns "no available IPs" error
+	// Take the only address in the range so the service's requested
+	// loadBalancerIP cannot be honored.
 	_, _ = r.NetworkMgr.AllocateIP("192.168.1.100-192.168.1.100")
 
-	_, err := r.Reconcile(context.Background(), reconcile.Request{
+	result, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault},
 	})
-	// Should return the IP allocation error (status update also fails but IP error comes first)
-	if err == nil {
-		t.Fatal("expected error from IP allocation, got nil")
+	// An allocation failure is not returned as an error: the reconciler records it
+	// on the status, logs the follow-up status-update failure, and asks to be
+	// requeued so a later attempt can succeed once the address frees up.
+	if err != nil {
+		t.Fatalf("Reconcile() error = %v, want nil with a requeue", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Error("Reconcile() RequeueAfter = 0, want a retry to be scheduled")
 	}
 }
 

@@ -109,6 +109,17 @@ Helios Load Balancer can coexist with MetalLB in the same cluster if properly co
 
 This way, you can leverage both load balancers in your cluster, each managing its own IP range.
 
+`spec.loadBalancerIP` does double duty here. It selects which load balancer picks
+up the Service, and Helios-LB then assigns exactly that address — the request is
+honored, never silently swapped for another one. If the address is already taken
+by another Service, allocation fails and the reason is recorded on the
+HeliosConfig status rather than a different IP being handed out. Omit the field
+to take the next free address from the pool.
+
+The address must be one the pool can actually hand out. For a CIDR range that
+excludes the network and broadcast addresses, so `192.0.2.0` and `192.0.2.255`
+are not valid requests against `192.0.2.0/24`.
+
 <br/>
 
 ## Installation

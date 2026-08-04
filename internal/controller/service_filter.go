@@ -29,10 +29,13 @@ func FilterEligibleServices(services []corev1.Service, namespaceSelector []strin
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			continue
 		}
-		// If loadBalancerIP is set, it must fall within the config's IP range (IPv4 or IPv6)
+		// A requested loadBalancerIP must be an address this config can actually
+		// hand out, not merely one contained in the range: the allocator honors
+		// the request verbatim, so accepting an unallocatable address here (an
+		// IPv4 network or broadcast address, say) would only fail later.
 		if svc.Spec.LoadBalancerIP != "" {
-			inV4 := network.IPInRange(svc.Spec.LoadBalancerIP, ipRange)
-			inV6 := len(ipv6Range) > 0 && ipv6Range[0] != "" && network.IPInRange(svc.Spec.LoadBalancerIP, ipv6Range[0])
+			inV4 := network.IPAllocatable(svc.Spec.LoadBalancerIP, ipRange)
+			inV6 := len(ipv6Range) > 0 && ipv6Range[0] != "" && network.IPAllocatable(svc.Spec.LoadBalancerIP, ipv6Range[0])
 			if !inV4 && !inV6 {
 				continue
 			}
