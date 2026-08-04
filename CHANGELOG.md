@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.8.0](https://github.com/somaz94/helios-lb/compare/v0.7.0...v0.8.0) (2026-08-04)
+
+### Features
+
+- honor a Service's requested loadBalancerIP instead of ignoring it ([8510579](https://github.com/somaz94/helios-lb/commit/8510579076d2e21c208a92dfc038ac707400e402))
+
+### Bug Fixes
+
+- **test:** delete the e2e fixtures before the controller is torn down ([1b7fe14](https://github.com/somaz94/helios-lb/commit/1b7fe14dc9315188e93f88ed9dace888d1e8b5e9))
+
+### Code Refactoring
+
+- name repeated string literals as constants ([ad4831a](https://github.com/somaz94/helios-lb/commit/ad4831a932d4549d5f20adccd0a35deebefd42f0))
+- drop always-zero ctrl.Result from handleDeletion signature ([c7b1212](https://github.com/somaz94/helios-lb/commit/c7b121289463100a2d24cdef8ac802585c1a1076))
+
+### Documentation
+
+- note that hack script IP defaults are documentation addresses ([9c226ca](https://github.com/somaz94/helios-lb/commit/9c226cabae3b0f6f6f13d3117c26f09d6fa862d5))
+- replace internal lab IP range with RFC 5737 documentation addresses ([80238de](https://github.com/somaz94/helios-lb/commit/80238def47fada9d0165dcd938369578ea1a6b08))
+
+### Tests
+
+- verify the requested loadBalancerIP is assigned in e2e ([2c2779d](https://github.com/somaz94/helios-lb/commit/2c2779da7e6afcca1c13bca51efcb5ed8fc8d99f))
+- cover IP comparison and the NetworkManager allocator delegation ([c404bd8](https://github.com/somaz94/helios-lb/commit/c404bd88302d9ca583d3af3502070da25e224807))
+
+### Chores
+
+- **release:** bump version to v0.8.0 ([2ecec96](https://github.com/somaz94/helios-lb/commit/2ecec9610e0f7d9c642f39dc4234923cf6cf7d3e))
+- remove dead kubebuilder RBAC markers from cmd/main.go ([3867a65](https://github.com/somaz94/helios-lb/commit/3867a652f9dca311e60b50f8ce65959c29e230de))
+- fix comment-spacings and extract repeated test literals into constants ([904c332](https://github.com/somaz94/helios-lb/commit/904c332e33c71dfdd27779ad47af08a270de755d))
+- resolve golangci-lint errcheck, staticcheck and unconvert findings ([b0cb26b](https://github.com/somaz94/helios-lb/commit/b0cb26b3cdb9d8d5f4b04b22fdb2eb44228ddd51))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.7.0](https://github.com/somaz94/helios-lb/compare/v0.6.3...v0.7.0) (2026-07-29)
 
 ### Features
