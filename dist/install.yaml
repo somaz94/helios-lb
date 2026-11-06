@@ -218,14 +218,15 @@ spec:
               allocatedIPs:
                 additionalProperties:
                   type: string
-                description: AllocatedIPs is a map of service names to their allocated
-                  IPv4 addresses
+                description: |-
+                  AllocatedIPs maps "<namespace>/<service>" to the allocated IPv4 address.
+                  Entries written by earlier versions are keyed by the service name alone.
                 type: object
               allocatedIPv6s:
                 additionalProperties:
                   type: string
-                description: AllocatedIPv6s is a map of service names to their allocated
-                  IPv6 addresses (dual-stack)
+                description: AllocatedIPv6s maps "<namespace>/<service>" to the allocated
+                  IPv6 address (dual-stack)
                 type: object
               conditions:
                 description: Conditions represent the latest available observations
@@ -588,7 +589,7 @@ spec:
         - --health-probe-bind-address=:9082
         command:
         - /manager
-        image: somaz940/helios-lb:v0.8.0
+        image: somaz940/helios-lb:v0.8.1
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:

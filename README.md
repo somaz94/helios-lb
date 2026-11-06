@@ -130,7 +130,7 @@ are not valid requests against `192.0.2.0/24`.
 ```bash
 # Single-command install — no helm repo add needed
 helm install helios-lb oci://ghcr.io/somaz94/charts/helios-lb \
-  --version 0.8.0
+  --version 0.8.1
 ```
 
 The chart creates the `helios-lb-system` namespace itself (`namespace` in its values) and deploys the controller there, so install it without `--namespace` and `--create-namespace`: with them, the install fails with `namespaces "helios-lb-system" already exists`.
@@ -147,7 +147,7 @@ helm install helios-lb helios-lb/helios-lb
 
 # Or install with custom values
 helm install helios-lb helios-lb/helios-lb \
-  --set image.tag=v0.8.0
+  --set image.tag=v0.8.1
 ```
 
 For full Helm chart options, see [Helm README](docs/HELM.md).
@@ -173,7 +173,7 @@ cd helios-lb
 make install
 
 # Deploy the controller
-make deploy IMG=somaz940/helios-lb:v0.8.0
+make deploy IMG=somaz940/helios-lb:v0.8.1
 ```
 
 <br/>
