@@ -60,13 +60,9 @@ func TestNetworkManager(t *testing.T) {
 			t.Errorf("Expected IP %s, got %s", singleIP, ip1)
 		}
 
-		// Second allocation of same IP should succeed
-		ip2, err := nm.AllocateIP(singleIP)
-		if err != nil {
-			t.Fatalf("Failed to allocate same IP again: %v", err)
-		}
-		if ip2 != singleIP {
-			t.Errorf("Expected same IP %s, got %s", singleIP, ip2)
+		// A second service cannot share the only address
+		if ip2, err := nm.AllocateIP(singleIP); err == nil {
+			t.Fatalf("second allocation of a single IP = %s, want an error", ip2)
 		}
 	})
 

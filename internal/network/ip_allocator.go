@@ -39,10 +39,12 @@ func (a *IPAllocator) AllocateIP(ipRange string) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// If the requested IP is a single IP within the range
+	// A single-address range has one address to give, to one service.
 	if start.Equal(end) {
 		ipStr := start.String()
-		// Even if it's already in use, return the same IP
+		if a.used[ipStr] {
+			return "", fmt.Errorf("no available IP in range %s: %s is already allocated", ipRange, ipStr)
+		}
 		a.used[ipStr] = true
 		return ipStr, nil
 	}

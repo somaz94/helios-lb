@@ -58,19 +58,17 @@ func (m *IPManager) AllocateAndAssign(
 	heliosConfig *balancerv1.HeliosConfig,
 	svc *corev1.Service,
 ) (string, string, error) {
-	// Mark IPs already allocated by other configs to avoid duplicates
+	// The allocator's used-set lives in memory and starts empty after a restart,
+	// so every recorded allocation is marked, this config's own included.
 	var allConfigs balancerv1.HeliosConfigList
 	if err := m.Client.List(ctx, &allConfigs); err != nil {
 		return "", "", NewRetryableError("failed to list configs for conflict check", err)
 	}
-	for _, other := range allConfigs.Items {
-		if other.Name == heliosConfig.Name && other.Namespace == heliosConfig.Namespace {
-			continue
-		}
-		for _, ip := range other.Status.AllocatedIPs {
+	for _, cfg := range allConfigs.Items {
+		for _, ip := range cfg.Status.AllocatedIPs {
 			m.NetworkMgr.MarkUsed(ip)
 		}
-		for _, ip := range other.Status.AllocatedIPv6s {
+		for _, ip := range cfg.Status.AllocatedIPv6s {
 			m.NetworkMgr.MarkUsed(ip)
 		}
 	}
@@ -179,10 +177,11 @@ func (m *IPManager) ReleaseAll(
 
 	// Clear ingress for all affected services
 	for serviceName := range serviceNames {
+		ns, name := splitAllocationKey(serviceName, heliosConfig.Namespace)
 		var svc corev1.Service
 		if err := m.Client.Get(ctx, types.NamespacedName{
-			Name:      serviceName,
-			Namespace: heliosConfig.Namespace,
+			Name:      name,
+			Namespace: ns,
 		}, &svc); err == nil {
 			svc.Status.LoadBalancer.Ingress = nil
 			if err := m.Client.Status().Update(ctx, &svc); err != nil {
@@ -239,4 +238,80 @@ func (m *IPManager) CheckQuota(heliosConfig *balancerv1.HeliosConfig) error {
 			len(heliosConfig.Status.AllocatedIPs), heliosConfig.Spec.MaxAllocations)
 	}
 	return nil
+}
+
+// allocationKey keys a service in status.allocatedIPs. The namespace is part of
+// the key: two services of the same name in different namespaces would
+// otherwise overwrite each other's entry.
+func allocationKey(svc *corev1.Service) string {
+	return svc.Namespace + "/" + svc.Name
+}
+
+// splitAllocationKey reverses allocationKey. A key without a namespace was
+// written by an earlier version, which only served services in the config's
+// own namespace, so that namespace is assumed.
+func splitAllocationKey(key, configNamespace string) (namespace, name string) {
+	if ns, n, ok := strings.Cut(key, "/"); ok {
+		return ns, n
+	}
+	return configNamespace, key
+}
+
+// MarkServiceIngress marks every address already set on a LoadBalancer
+// service as used, whoever assigned it, so the pool never hands it out twice.
+func (m *IPManager) MarkServiceIngress(services []corev1.Service) {
+	for _, svc := range services {
+		if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+			continue
+		}
+		for _, ing := range svc.Status.LoadBalancer.Ingress {
+			if ing.IP != "" {
+				m.NetworkMgr.MarkUsed(ing.IP)
+			}
+		}
+	}
+}
+
+// ReleaseStale returns to the pool every address whose service was deleted,
+// is no longer of type LoadBalancer, or now carries a different address, and
+// drops its status entry. A service whose ingress is empty keeps its entry:
+// that can be a cache that has not seen the assignment yet. It reports whether
+// the status changed.
+func (m *IPManager) ReleaseStale(logger logr.Logger, heliosConfig *balancerv1.HeliosConfig, services []corev1.Service) bool {
+	byKey := make(map[string]*corev1.Service, len(services))
+	for i := range services {
+		byKey[allocationKey(&services[i])] = &services[i]
+	}
+
+	changed := false
+	for _, allocations := range []map[string]string{heliosConfig.Status.AllocatedIPs, heliosConfig.Status.AllocatedIPv6s} {
+		for key, ip := range allocations {
+			ns, name := splitAllocationKey(key, heliosConfig.Namespace)
+			if !isStale(byKey[ns+"/"+name], ip) {
+				continue
+			}
+			m.NetworkMgr.ReleaseIP(ip)
+			m.Metrics.RecordIPAllocation(ip, false)
+			delete(allocations, key)
+			changed = true
+			logger.Info("released address of a service that no longer holds it", LogKeyService, key, LogKeyIP, ip)
+		}
+	}
+	return changed
+}
+
+func isStale(svc *corev1.Service, ip string) bool {
+	if svc == nil || svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+		return true
+	}
+	ingress := svc.Status.LoadBalancer.Ingress
+	if len(ingress) == 0 {
+		return false
+	}
+	for _, ing := range ingress {
+		if ing.IP == ip {
+			return false
+		}
+	}
+	return true
 }

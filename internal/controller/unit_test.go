@@ -1755,16 +1755,17 @@ func TestReconcile_DualStack(t *testing.T) {
 		t.Error("expected requeue after")
 	}
 
-	// Verify HeliosConfig status has both IPv4 and IPv6
+	// Verify HeliosConfig status has both IPv4 and IPv6, keyed by namespace/name
+	svcKey := nsDefault + "/" + nameTestSvc
 	var updated balancerv1.HeliosConfig
 	if getErr := cl.Get(context.Background(), types.NamespacedName{Name: nameTestHelios, Namespace: nsDefault}, &updated); getErr != nil {
 		t.Fatalf("failed to get HeliosConfig: %v", getErr)
 	}
-	if updated.Status.AllocatedIPs[nameTestSvc] != testSingleIP {
-		t.Errorf("expected IPv4 172.16.0.100, got %s", updated.Status.AllocatedIPs[nameTestSvc])
+	if updated.Status.AllocatedIPs[svcKey] != testSingleIP {
+		t.Errorf("expected IPv4 172.16.0.100, got %s", updated.Status.AllocatedIPs[svcKey])
 	}
-	if updated.Status.AllocatedIPv6s[nameTestSvc] != "fd00::100" {
-		t.Errorf("expected IPv6 fd00::100, got %s", updated.Status.AllocatedIPv6s[nameTestSvc])
+	if updated.Status.AllocatedIPv6s[svcKey] != "fd00::100" {
+		t.Errorf("expected IPv6 fd00::100, got %s", updated.Status.AllocatedIPv6s[svcKey])
 	}
 
 	// Verify service has dual-stack ingress

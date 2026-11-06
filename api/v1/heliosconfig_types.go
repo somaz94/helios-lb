@@ -143,10 +143,11 @@ type PortConfig struct {
 
 // HeliosConfigStatus defines the observed state of HeliosConfig.
 type HeliosConfigStatus struct {
-	// AllocatedIPs is a map of service names to their allocated IPv4 addresses
+	// AllocatedIPs maps "<namespace>/<service>" to the allocated IPv4 address.
+	// Entries written by earlier versions are keyed by the service name alone.
 	AllocatedIPs map[string]string `json:"allocatedIPs,omitempty"`
 
-	// AllocatedIPv6s is a map of service names to their allocated IPv6 addresses (dual-stack)
+	// AllocatedIPv6s maps "<namespace>/<service>" to the allocated IPv6 address (dual-stack)
 	AllocatedIPv6s map[string]string `json:"allocatedIPv6s,omitempty"`
 
 	// State represents the current state of the load balancer

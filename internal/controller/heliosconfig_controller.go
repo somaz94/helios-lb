@@ -124,6 +124,14 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	if r.IPMgr.ReleaseStale(logger, &heliosConfig, serviceList.Items) {
+		if err := r.Status().Update(ctx, &heliosConfig); err != nil {
+			logger.Error(err, "failed to update status after releasing stale addresses")
+			return ctrl.Result{}, err
+		}
+	}
+	r.IPMgr.MarkServiceIngress(serviceList.Items)
+
 	// Filter eligible services using extracted logic
 	eligible := FilterEligibleServices(
 		serviceList.Items,
@@ -218,12 +226,12 @@ func (r *HeliosConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if heliosConfig.Status.AllocatedIPs == nil {
 			heliosConfig.Status.AllocatedIPs = make(map[string]string)
 		}
-		heliosConfig.Status.AllocatedIPs[svc.Name] = ip
+		heliosConfig.Status.AllocatedIPs[allocationKey(svc)] = ip
 		if ipv6 != "" {
 			if heliosConfig.Status.AllocatedIPv6s == nil {
 				heliosConfig.Status.AllocatedIPv6s = make(map[string]string)
 			}
-			heliosConfig.Status.AllocatedIPv6s[svc.Name] = ipv6
+			heliosConfig.Status.AllocatedIPv6s[allocationKey(svc)] = ipv6
 		}
 		heliosConfig.Status.Phase = balancerv1.StateActive
 		heliosConfig.Status.State = balancerv1.StateActive

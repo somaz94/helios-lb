@@ -60,13 +60,14 @@ func TestIPAllocator(t *testing.T) {
 			t.Errorf("Expected IP 192.168.1.1, got %s", ip1)
 		}
 
-		// Re-allocating the same single-IP range should return the same IP.
-		ip2, err := allocator.AllocateIP("192.168.1.1-192.168.1.1")
-		if err != nil {
-			t.Fatalf("Failed to reallocate same IP: %v", err)
+		// The one address is taken until it is released.
+		if ip2, err := allocator.AllocateIP("192.168.1.1-192.168.1.1"); err == nil {
+			t.Fatalf("second allocation from a single-IP range = %s, want an error", ip2)
 		}
-		if ip2 != testRangeStartIP {
-			t.Errorf("Expected same IP 192.168.1.1, got %s", ip2)
+		allocator.ReleaseIP(ip1)
+		ip3, err := allocator.AllocateIP("192.168.1.1-192.168.1.1")
+		if err != nil || ip3 != testRangeStartIP {
+			t.Errorf("allocation after release = %q, %v; want 192.168.1.1", ip3, err)
 		}
 	})
 
