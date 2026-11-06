@@ -38,7 +38,7 @@ Guide for building, testing, and contributing to helios-lb.
 │   └── v1/                           # HeliosConfig CRD types
 ├── internal/
 │   ├── controller/                   # Reconciliation logic
-│   ├── loadbalancer/                 # LB algorithms & IP allocation
+│   ├── loadbalancer/                 # LB algorithms (not wired into the controller yet)
 │   ├── metrics/                      # Prometheus metrics
 │   └── network/                      # Network interface management
 ├── config/
@@ -71,8 +71,8 @@ Guide for building, testing, and contributing to helios-lb.
 | `cmd/` | Controller manager entry point |
 | `api/v1/` | HeliosConfig CRD type definitions |
 | `internal/controller/` | Kubernetes reconciliation logic |
-| `internal/loadbalancer/` | Load balancing algorithms and IP allocation |
-| `internal/network/` | Network interface and ARP management |
+| `internal/loadbalancer/` | Load balancing algorithms (not wired into the controller yet) |
+| `internal/network/` | IP range parsing and allocation |
 | `internal/metrics/` | Prometheus metrics collectors |
 | `config/` | Kustomize manifests for CRDs, RBAC, deployment |
 | `helm/` | Helm chart for production deployment |

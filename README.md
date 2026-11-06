@@ -1,6 +1,6 @@
 # Helios Load Balancer
 
-> Bare-metal Kubernetes load balancer (MetalLB alternative) — IPv4/IPv6 dual-stack, multiple LB algorithms, ARP layer-2, and Prometheus metrics.
+> Bare-metal Kubernetes controller that assigns LoadBalancer IPs from IPv4/IPv6 address pools, with namespace selectors, per-pool quotas and Prometheus metrics.
 
 ![Top Language](https://img.shields.io/github/languages/top/somaz94/helios-lb?color=green&logo=go&logoColor=b)
 ![helios-lb](https://img.shields.io/github/v/tag/somaz94/helios-lb?label=helios-lb&logo=kubernetes&logoColor=white)
@@ -10,7 +10,7 @@
 ![GitHub Release](https://img.shields.io/github/release/somaz94/helios-lb?logo=github)
 ![GitHub Stars](https://img.shields.io/github/stars/somaz94/helios-lb?style=social)
 
-Helios Load Balancer is a Kubernetes controller that provides load balancing functionality for bare metal Kubernetes clusters, similar to MetalLB. It automatically assigns IP addresses to LoadBalancer services and manages the network configuration.
+Helios Load Balancer is a Kubernetes controller for bare metal clusters that gives LoadBalancer services an external IP. It allocates addresses from the pools you define and writes them to the Service status.
 
 ![A LoadBalancer Service waits at pending until a HeliosConfig pool exists, then helios-lb gives it an address from the pool](examples/demo/demo.gif)
 
@@ -20,12 +20,6 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 
 ![IP Allocation](https://img.shields.io/badge/IP_Allocation-blue?logo=kubernetes&logoColor=white)
 ![CIDR Range](https://img.shields.io/badge/CIDR_Range-blue?logo=kubernetes&logoColor=white)
-![Round Robin](https://img.shields.io/badge/Round_Robin-green?logo=kubernetes&logoColor=white)
-![Least Connection](https://img.shields.io/badge/Least_Connection-green?logo=kubernetes&logoColor=white)
-![Weighted Round Robin](https://img.shields.io/badge/Weighted_Round_Robin-green?logo=kubernetes&logoColor=white)
-![IP Hash](https://img.shields.io/badge/IP_Hash-green?logo=kubernetes&logoColor=white)
-![Random](https://img.shields.io/badge/Random-green?logo=kubernetes&logoColor=white)
-![ARP Layer2](https://img.shields.io/badge/ARP_Layer2-orange?logo=kubernetes&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus_Metrics-E6522C?logo=prometheus&logoColor=white)
 ![IPv6](https://img.shields.io/badge/IPv6-blue?logo=kubernetes&logoColor=white)
 ![Bare Metal](https://img.shields.io/badge/Bare_Metal-326CE5?logo=kubernetes&logoColor=white)
@@ -33,18 +27,15 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 - Automatic IP address allocation for LoadBalancer services
 - Support for IP ranges in CIDR, range, or single IP format
 - IPv4 and IPv6 dual-stack support
-- Multiple load balancing methods (RoundRobin, LeastConnection, WeightedRoundRobin, IPHash, Random)
-- Per-service backend weights for WeightedRoundRobin
 - Multiple HeliosConfig resources per cluster with independent IP ranges
 - Namespace isolation via `namespaceSelector`
 - Per-config IP allocation quota via `maxAllocations`
-- Configurable health checks (TCP/HTTP, custom timeout and interval)
 - CRD schema validation (CEL) for port/weight uniqueness, method-weight consistency, and health check config
 - Optional validating webhook for IP range format and cross-config overlap validation
-- ARP-based layer 2 mode
-- Pluggable algorithm interface for custom load balancing strategies
 - Prometheus metrics support
 - Status monitoring and reporting
+
+The `method`, `weights` and `healthCheck` fields are accepted and validated, but the controller does not act on them yet. helios-lb also does not announce addresses on the network (no ARP or BGP). Traffic to a Service is distributed by kube-proxy as usual, and the address pool has to be reachable through your own network, for example with routes to your nodes.
 
 <br/>
 
@@ -53,9 +44,7 @@ Helios Load Balancer is a Kubernetes controller that provides load balancing fun
 The controller:
 1. Watches for services of type LoadBalancer
 2. Allocates IP addresses from configured IP ranges
-3. Configures network interfaces with virtual IPs
-4. Manages ARP announcements for layer 2 connectivity
-5. Updates service status with allocated external IPs
+3. Updates service status with allocated external IPs
 
 <br/>
 
@@ -433,7 +422,7 @@ This ensures that:
 
 ### Load Balancing Algorithms
 
-Helios-LB supports the following load balancing algorithms:
+The `method` field accepts the following values. The CRD validates them, but the controller does not apply them yet (see [Features](#features)).
 
 1. **Round Robin (Default)**
    ```yaml
@@ -489,11 +478,9 @@ Common issues and solutions:
 2. **Service external IP not assigned:**
    - Verify HeliosConfig exists and is valid
    - Check controller logs for errors
-   - Verify network interface configuration
 
 3. **Network connectivity issues:**
-   - Check ARP announcements
-   - Verify network interface configuration
+   - helios-lb does not announce addresses, so make sure the pool is routed to your nodes
    - Ensure IP range is valid for your network
 
 <br/>

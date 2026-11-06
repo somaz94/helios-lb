@@ -62,7 +62,6 @@ Common causes:
 - CRD not installed: Run `make install` or reinstall Helm chart
 - RBAC permission denied: Check ClusterRole and ClusterRoleBinding
 - Port conflict: Metrics (8443) or health probe (9082) port already in use
-- Network interface not available for ARP announcements
 
 ### CRD not found
 
@@ -103,16 +102,9 @@ kubectl get svc <name> -o jsonpath='{.spec.loadBalancerClass}'
 kubectl get svc -A -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.name}: {.status.loadBalancer.ingress[0].ip}{"\n"}{end}'
 ```
 
-### ARP announcements not working
+### External IP assigned but not reachable
 
-- Ensure `hostNetwork: true` is configured for the controller
-- Verify the network interface exists on the node
-- Check if another load balancer (e.g., MetalLB) is conflicting
-
-```bash
-# Check ARP entries on the node
-arping -c 3 <external-ip>
-```
+helios-lb only allocates the address and writes it to the Service status. It does not announce the address with ARP or BGP, so your network has to route the pool to the nodes, for example with a static route. Also check that another load balancer such as MetalLB is not handing out the same range.
 
 ### Conflict with MetalLB
 
