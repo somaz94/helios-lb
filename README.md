@@ -409,14 +409,7 @@ spec:
     app: nginx-test
 ```
 
-The controller automatically adds the necessary annotations and specifications:
-- Adds annotation: `balancer.helios.dev/load-balancer-class: helios-lb`
-- Sets spec: `loadBalancerClass: helios-lb`
-
-This ensures that:
-1. MetalLB ignores services marked for Helios-LB
-2. Helios-LB only processes services specifically marked for it
-3. No conflicts occur between the two load balancers
+Helios-LB serves Services whose `spec.loadBalancerClass` is `helios-lb` or unset, and adds the annotation `balancer.helios.dev/load-balancer-class: helios-lb` to the Services it serves. Kubernetes only accepts `loadBalancerClass` when a Service is created, so the controller cannot set it afterwards; set it yourself, as above. MetalLB then skips the Service, and Helios-LB skips every Service with another class. A Service with no class is picked up by both controllers, so leave none unset while both run.
 
 <br/>
 
