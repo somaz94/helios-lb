@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.8.1](https://github.com/somaz94/helios-lb/compare/v0.8.0...v0.8.1) (2026-11-06)
+
+### Bug Fixes
+
+- stop duplicate and leaked IP allocations across restarts, namespaces and deleted services ([cae0fbb](https://github.com/somaz94/helios-lb/commit/cae0fbb7048666646ae8cacdd3afec018a17f271))
+
+### Documentation
+
+- describe how loadBalancerClass coexistence with MetalLB actually works ([beca552](https://github.com/somaz94/helios-lb/commit/beca552d218a2a6ba2ec978d83ed7281a7a971dd))
+- align README claims with implemented behavior ([cafbca9](https://github.com/somaz94/helios-lb/commit/cafbca9bfdea2d3ade25dac4eb59f37d3c17212c))
+- add related projects section to README ([39bc36d](https://github.com/somaz94/helios-lb/commit/39bc36d59eebfd02656471098d83785bf9ef1fdf))
+- fix the Helm install commands that fail on the chart-created namespace ([97ee626](https://github.com/somaz94/helios-lb/commit/97ee626a76e1b3dc58fb150616612bce132af983))
+- add a demo GIF of a Service getting an address from a HeliosConfig pool ([3a27a58](https://github.com/somaz94/helios-lb/commit/3a27a58523d614022341637057ceaea5c734fbca))
+
+### Continuous Integration
+
+- deduplicate identical commit lines in release notes ([6a0e934](https://github.com/somaz94/helios-lb/commit/6a0e9342a8ad4398dc91db068fc0082a69504e39))
+- trim redundant comments in gitlab-mirror workflow ([190e98c](https://github.com/somaz94/helios-lb/commit/190e98c64f30658c1a1a216d79a13a11c1811961))
+- retry mirror pushes on transient remote failures ([8a17e49](https://github.com/somaz94/helios-lb/commit/8a17e491ab59e365e7aa7591e9b680cf1cbf630c))
+- drop the dead issue-close trigger from changelog generation ([80a812a](https://github.com/somaz94/helios-lb/commit/80a812a7ea085337aa3596335d534171e74c8fea))
+
+### Chores
+
+- **release:** bump version to v0.8.1 ([c2eb4ff](https://github.com/somaz94/helios-lb/commit/c2eb4ff30eab2397ce638fa83fe4705034d1b9de))
+- **deps:** bump the go-minor group with 3 updates (#71) ([#71](https://github.com/somaz94/helios-lb/pull/71)) ([474f2ab](https://github.com/somaz94/helios-lb/commit/474f2abdfe41092fc349ee46a1224153f5824208))
+- **deps:** bump github.com/onsi/ginkgo/v2 (#70) ([#70](https://github.com/somaz94/helios-lb/pull/70)) ([98f8764](https://github.com/somaz94/helios-lb/commit/98f876454edc63bf3702d7c2fdb1fc769db24e7f))
+- **deps:** bump github.com/prometheus/client_golang (#69) ([#69](https://github.com/somaz94/helios-lb/pull/69)) ([b89aca8](https://github.com/somaz94/helios-lb/commit/b89aca890d5ef90da92d4a37285efd0d2720364f))
+- correct stale project name comment in bump-version.sh ([847a9a1](https://github.com/somaz94/helios-lb/commit/847a9a14a08eb5616f16034cc29ee13abd2d406f))
+- base create-pr.sh on origin/main ([e443c39](https://github.com/somaz94/helios-lb/commit/e443c39f053b0cb35d85a71fbee0f00b6c860bbd))
+- classify scoped and breaking commits in create-pr.sh ([994aca9](https://github.com/somaz94/helios-lb/commit/994aca90613ec512249cda56db93dac534c80cd9))
+- trim boilerplate comments in repo config and scripts ([2752688](https://github.com/somaz94/helios-lb/commit/27526888b828e88031c7200cfd2d768a60097458))
+- **deps:** bump sigs.k8s.io/controller-runtime (#68) ([#68](https://github.com/somaz94/helios-lb/pull/68)) ([49e27e1](https://github.com/somaz94/helios-lb/commit/49e27e1ceee9555d90e56de63a823b822631f9c7))
+- **deps:** bump the go-minor group with 4 updates (#67) ([#67](https://github.com/somaz94/helios-lb/pull/67)) ([18f0a49](https://github.com/somaz94/helios-lb/commit/18f0a4918ddb0aba288f254056828713de030518))
+- **deps:** bump the go-minor group with 3 updates (#66) ([#66](https://github.com/somaz94/helios-lb/pull/66)) ([c51d5e1](https://github.com/somaz94/helios-lb/commit/c51d5e1752634ad78f1bdf19c6f5453203567f84))
+- **deps:** bump github.com/onsi/ginkgo/v2 in the go-minor group (#65) ([#65](https://github.com/somaz94/helios-lb/pull/65)) ([c5fee02](https://github.com/somaz94/helios-lb/commit/c5fee02914500b5a166c85d798bcab671c7f4a9f))
+- **deps:** bump sigs.k8s.io/controller-runtime in the go-minor group (#64) ([#64](https://github.com/somaz94/helios-lb/pull/64)) ([8055654](https://github.com/somaz94/helios-lb/commit/8055654d61c154a0b4fdc735371ed21340c39271))
+- **deps:** bump github.com/onsi/gomega in the go-minor group (#63) ([#63](https://github.com/somaz94/helios-lb/pull/63)) ([ddc25eb](https://github.com/somaz94/helios-lb/commit/ddc25ebc0616c6c1685eb5e2035f9a79fd3a9183))
+- **deps:** bump the go-minor group with 3 updates (#62) ([#62](https://github.com/somaz94/helios-lb/pull/62)) ([9d0bf1c](https://github.com/somaz94/helios-lb/commit/9d0bf1ceaa48670f35716f0bb21edb2e80b1dc9b))
+- **deps:** bump golang from 1.26 to 1.27 in the docker-minor group (#61) ([#61](https://github.com/somaz94/helios-lb/pull/61)) ([e8e024e](https://github.com/somaz94/helios-lb/commit/e8e024e2d34f33a54ba2ccf5663911ad547f52e4))
+- **deps:** bump github.com/onsi/ginkgo/v2 in the go-minor group (#60) ([#60](https://github.com/somaz94/helios-lb/pull/60)) ([674248f](https://github.com/somaz94/helios-lb/commit/674248fc2f27aea3ad8b41e192ea2e63b5e5e1ac))
+
+### Contributors
+
+- somaz
+
+<br/>
+
 ## [v0.8.0](https://github.com/somaz94/helios-lb/compare/v0.7.0...v0.8.0) (2026-08-04)
 
 ### Features
