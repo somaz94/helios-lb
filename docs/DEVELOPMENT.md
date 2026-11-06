@@ -10,6 +10,7 @@ Guide for building, testing, and contributing to helios-lb.
 - [Project Structure](#project-structure)
 - [Build](#build)
 - [Testing](#testing)
+- [Demo](#demo)
 - [Docker](#docker)
 - [Workflow](#workflow)
 - [CI/CD Workflows](#cicd-workflows)
@@ -98,6 +99,17 @@ make test-integration     # Integration tests on live cluster
 make test-helm            # Helm chart tests (lint, install, sync, uninstall)
 make lint                 # Run golangci-lint
 make find-free-ip         # Scan for available IPs before testing
+```
+
+<br/>
+
+## Demo
+
+The GIF in the README replays output saved from a real run, because the recording container has no cluster. `capture.sh` creates a kind cluster named `helios-lb-demo` with its own kubeconfig, installs the chart in `helm/helios-lb` with its published image, applies the Service and the HeliosConfig in `examples/demo/`, and deletes the cluster on exit. When the output changes, regenerate both:
+
+```bash
+examples/demo/capture.sh
+docker run --rm -v "$PWD:/vhs" ghcr.io/charmbracelet/vhs examples/demo/demo.tape
 ```
 
 <br/>

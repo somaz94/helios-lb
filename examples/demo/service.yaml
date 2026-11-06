@@ -1,0 +1,14 @@
+# Demo Service: asks helios-lb for an address and gets none until a HeliosConfig exists.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: default
+spec:
+  type: LoadBalancer
+  loadBalancerClass: helios-lb
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80

@@ -1,0 +1,2 @@
+NAME   TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+web    LoadBalancer   10.96.238.222   192.0.2.10    80:31704/TCP   2s

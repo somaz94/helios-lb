@@ -12,6 +12,8 @@
 
 Helios Load Balancer is a Kubernetes controller that provides load balancing functionality for bare metal Kubernetes clusters, similar to MetalLB. It automatically assigns IP addresses to LoadBalancer services and manages the network configuration.
 
+![A LoadBalancer Service waits at pending until a HeliosConfig pool exists, then helios-lb gives it an address from the pool](examples/demo/demo.gif)
+
 <br/>
 
 ## Features

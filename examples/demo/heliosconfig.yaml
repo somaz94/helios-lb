@@ -1,0 +1,8 @@
+# Demo pool: a documentation range, so nothing on a real network is claimed.
+apiVersion: balancer.helios.dev/v1
+kind: HeliosConfig
+metadata:
+  name: demo-pool
+spec:
+  ipRange: "192.0.2.10-192.0.2.20"
+  method: RoundRobin
